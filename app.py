@@ -90,12 +90,8 @@ def index():
 @app.route('/merge', methods=['POST'])
 def merge():
     expense_type = request.form.get('expense_type')
-    person_name  = request.form.get('person_name', '').strip()
-
     if not expense_type or expense_type not in EXPENSE_TYPES:
         return jsonify({'error': '유효하지 않은 비용 유형입니다.'}), 400
-    if not person_name:
-        return jsonify({'error': '이름을 입력해주세요.'}), 400
 
     info      = EXPENSE_TYPES[expense_type]
     doc_order = [d['id'] for d in info['documents']]
@@ -114,7 +110,7 @@ def merge():
     try:
         merged = merge_files(files_dict, doc_order)
         date_str = datetime.now().strftime('%Y%m%d')
-        filename = f"{person_name}_{info['name']}_{date_str}.pdf"
+        filename = f"{info['name']}_{date_str}.pdf"
         return send_file(merged, mimetype='application/pdf',
                          as_attachment=True, download_name=filename)
     except Exception as e:

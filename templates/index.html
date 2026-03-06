@@ -128,20 +128,10 @@
 
 <div class="container py-5" style="max-width: 860px;">
 
-  <!-- Step 1: 이름 입력 -->
-  <div class="mb-4">
-    <div class="d-flex align-items-center mb-2">
-      <span class="step-badge">1</span>
-      <span class="fw-semibold">이름 입력</span>
-    </div>
-    <input type="text" id="person-name" class="form-control" style="max-width:280px;"
-           placeholder="홍길동" autocomplete="off">
-  </div>
-
-  <!-- Step 2: 비용 유형 선택 -->
+  <!-- Step 1: 비용 유형 선택 -->
   <div class="mb-4">
     <div class="d-flex align-items-center mb-3">
-      <span class="step-badge">2</span>
+      <span class="step-badge">1</span>
       <span class="fw-semibold">비용 유형 선택</span>
     </div>
     <div class="row g-3" id="type-grid">
@@ -156,20 +146,20 @@
     </div>
   </div>
 
-  <!-- Step 3: 파일 업로드 -->
+  <!-- Step 2: 파일 업로드 -->
   <div id="upload-section" class="mb-4">
     <div class="d-flex align-items-center mb-3">
-      <span class="step-badge">3</span>
+      <span class="step-badge">2</span>
       <span class="fw-semibold">파일 업로드</span>
       <span class="ms-2 text-muted" id="type-name-label" style="font-size:.85rem;"></span>
     </div>
     <div id="doc-list" class="row g-3"></div>
   </div>
 
-  <!-- Step 4: 병합 -->
+  <!-- Step 3: 병합 -->
   <div id="merge-section" style="display:none;">
     <div class="d-flex align-items-center mb-3">
-      <span class="step-badge">4</span>
+      <span class="step-badge">3</span>
       <span class="fw-semibold">PDF 병합</span>
     </div>
     <button class="btn btn-merge" id="merge-btn" onclick="doMerge()">
@@ -273,9 +263,7 @@
 
   // ── Merge ────────────────────────────────────────────────────────────────────
   async function doMerge() {
-    const name = document.getElementById('person-name').value.trim();
-    if (!name)           return toast('이름을 입력해주세요.', true);
-    if (!selectedType)   return toast('비용 유형을 선택해주세요.', true);
+    if (!selectedType) return toast('비용 유형을 선택해주세요.', true);
 
     // Required check
     for (const doc of selectedDocs) {
@@ -286,7 +274,6 @@
 
     const form = new FormData();
     form.append('expense_type', selectedType);
-    form.append('person_name', name);
     selectedDocs.forEach(doc => {
       (fileStore[doc.id] || []).forEach(f => form.append(doc.id, f));
     });
