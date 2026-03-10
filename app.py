@@ -752,8 +752,6 @@ def merge():
 
     for doc in info['documents']:
         uploaded = [f for f in request.files.getlist(doc['id']) if f.filename]
-        if doc['required'] and not uploaded:
-            return jsonify({'error': f"'{doc['name']}' 파일이 필요합니다."}), 400
         if uploaded:
             files_dict[doc['id']] = uploaded
 

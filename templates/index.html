@@ -471,10 +471,7 @@
   function openConfirm() {
     if (!selectedType) return toast('비용 유형을 선택해주세요.', true);
 
-    for (const doc of selectedDocs) {
-      if (doc.required && (!fileStore[doc.id] || fileStore[doc.id].length === 0))
-        return toast(`'${doc.name}' 파일이 필요합니다.`, true);
-    }
+
 
     const listEl = document.getElementById('confirm-file-list');
     listEl.innerHTML = '';
