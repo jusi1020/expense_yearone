@@ -246,6 +246,15 @@
           <input type="text" id="custom-filename" class="form-control">
           <span class="input-group-text">.pdf</span>
         </div>
+        <div id="filename-hint-box" style="display:none; margin-top:.6rem;">
+          <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:.3rem;">📋 권장 파일명 형식</div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.5rem .75rem; font-size:.78rem; font-family:monospace; color:var(--text); word-break:break-all;" id="filename-hint-text"></div>
+          <button onclick="applyFilenameHint()" style="margin-top:.4rem; font-size:.75rem; padding:.25rem .75rem; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer;">✏️ 템플릿 적용</button>
+        </div>
+        <div id="filename-notes-box" style="display:none; margin-top:.75rem;">
+          <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:.3rem;">📬 이메일 본문 참고</div>
+          <div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:.5rem .75rem; font-size:.78rem; color:#92400e; line-height:1.7; white-space:pre-wrap;" id="filename-notes-text"></div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary-themed" data-bs-dismiss="modal">취소</button>
@@ -261,6 +270,24 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   const DESCRIPTIONS = {{ descriptions | tojson | safe }};
+
+  // ── 파일명 형식 힌트 ──────────────────────────────────────────────────────
+  const FILENAME_HINTS = {
+    'domestic_trip': {
+      filename: '[교수님명_과제명] 출장자_출장일_출장장소',
+      notes: '1. 여비신청내역(일비, 식비, 교통비) 요청\n2. 교통비 (자차: 운전자, 유종 기재)',
+    },
+    'overseas_trip': {
+      filename: '[교수님명_과제명] 출장자_출장일_출장장소',
+      notes: '1. 여비신청내역(일비, 식비, 교통비) 요청\n2. 교통비 (자차: 운전자, 유종 기재)',
+    },
+    'equipment_consumables': {
+      filename: '[교수님명_과제명] 재료비_카드결제일_업체명-검수자명(참여연구원 등록자에 한함)',
+    },
+    'central_purchase_reagent': {
+      filename: '[교수님명_과제명] 재료비_카드결제일_업체명-검수자명(참여연구원 등록자에 한함)',
+    },
+  };
   const TYPE_NAMES = {
     {% for cat_name, cat_info in categories.items() %}{% for key, info in cat_info.types.items() %}'{{ key }}': '{{ info.name }}',
     {% endfor %}{% endfor %}
@@ -445,6 +472,25 @@
 
     const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
     document.getElementById('custom-filename').value = `${TYPE_NAMES[selectedType]}_${date}`;
+
+    // 파일명 힌트
+    const hint = FILENAME_HINTS[selectedType];
+    const hintBox  = document.getElementById('filename-hint-box');
+    const notesBox = document.getElementById('filename-notes-box');
+    if (hint) {
+      document.getElementById('filename-hint-text').textContent = hint.filename + '.pdf';
+      hintBox.style.display = 'block';
+      if (hint.notes) {
+        document.getElementById('filename-notes-text').textContent = hint.notes;
+        notesBox.style.display = 'block';
+      } else {
+        notesBox.style.display = 'none';
+      }
+    } else {
+      hintBox.style.display  = 'none';
+      notesBox.style.display = 'none';
+    }
+
     new bootstrap.Modal(document.getElementById('confirmModal')).show();
   }
 
@@ -472,6 +518,12 @@
       toast('✅ PDF 병합 완료! 다운로드를 확인하세요.');
     } catch { toast('네트워크 오류가 발생했습니다.', true); }
     finally { btn.disabled = false; loading.style.display = 'none'; }
+  }
+
+  // ── Filename hint apply ────────────────────────────────────────────────────
+  function applyFilenameHint() {
+    const hint = FILENAME_HINTS[selectedType];
+    if (hint) document.getElementById('custom-filename').value = hint.filename;
   }
 
   // ── Description modal ──────────────────────────────────────────────────────
