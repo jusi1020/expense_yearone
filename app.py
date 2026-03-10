@@ -7,6 +7,8 @@ from supabase import create_client
 from dotenv import load_dotenv
 import io
 import os
+import random
+import string
 
 load_dotenv()
 
@@ -38,6 +40,9 @@ def get_current_user():
     except Exception:
         session.clear()
         return None
+
+def generate_invite_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
 
@@ -777,16 +782,65 @@ def download_byeolji(filename):
 @login_required
 def manage():
     user = get_current_user()
-    # 내 연구실 과제 목록 조회
     try:
-        profile = supabase.table('profiles').select('*, labs(*)').eq('id', user.id).single().execute()
-        lab_id  = profile.data.get('lab_id')
-        projects = supabase.table('projects').select('*').eq('lab_id', lab_id).order('created_at', desc=True).execute().data if lab_id else []
-        lab     = profile.data.get('labs')
+        profile  = supabase.table('profiles').select('*, labs(*)').eq('id', user.id).single().execute()
+        lab_id   = profile.data.get('lab_id')
+        lab      = profile.data.get('labs')
+        role     = profile.data.get('role', 'member')
+
+        if lab_id:
+            projects_raw = supabase.table('projects').select('*').eq('lab_id', lab_id).order('created_at', desc=True).execute().data or []
+            if projects_raw:
+                pids     = [p['id'] for p in projects_raw]
+                expenses = supabase.table('expenses').select('*').in_('project_id', pids).order('expense_date', desc=True).execute().data or []
+            else:
+                expenses = []
+            exp_map = {}
+            for e in expenses:
+                exp_map.setdefault(e['project_id'], []).append(e)
+            projects = []
+            for p in projects_raw:
+                p['expenses']    = exp_map.get(p['id'], [])
+                p['total_spent'] = sum(e['amount'] for e in p['expenses'])
+                projects.append(p)
+        else:
+            projects = []
     except Exception:
-        projects = []
-        lab      = None
-    return render_template('manage.html', user=user, projects=projects, lab=lab)
+        projects, lab, role = [], None, 'member'
+
+    return render_template('manage.html', user=user, projects=projects,
+                           lab=lab, role=role, expense_types=EXPENSE_TYPES)
+
+
+@app.route('/manage/labs/create', methods=['POST'])
+@login_required
+def create_lab():
+    user = get_current_user()
+    name = request.form.get('name', '').strip()
+    if not name:
+        return redirect(url_for('manage'))
+    try:
+        lab = supabase.table('labs').insert({
+            'name': name, 'invite_code': generate_invite_code(), 'admin_id': user.id
+        }).execute().data[0]
+        supabase.table('profiles').update({'lab_id': lab['id'], 'role': 'admin'}).eq('id', user.id).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
+
+
+@app.route('/manage/labs/join', methods=['POST'])
+@login_required
+def join_lab():
+    user = get_current_user()
+    code = request.form.get('invite_code', '').strip().upper()
+    try:
+        lab = supabase.table('labs').select('*').eq('invite_code', code).single().execute()
+        if lab.data:
+            supabase.table('profiles').update({'lab_id': lab.data['id'], 'role': 'member'}).eq('id', user.id).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
 
 
 @app.route('/manage/projects', methods=['POST'])
@@ -797,26 +851,53 @@ def create_project():
         profile = supabase.table('profiles').select('lab_id').eq('id', user.id).single().execute()
         lab_id  = profile.data.get('lab_id')
         if not lab_id:
-            return jsonify({'error': '연구실 정보가 없습니다.'}), 400
-        data = {
+            return redirect(url_for('manage'))
+        supabase.table('projects').insert({
             'lab_id':     lab_id,
             'name':       request.form.get('name'),
             'pi_name':    request.form.get('pi_name'),
-            'budget':     int(request.form.get('budget', 0)) if request.form.get('budget') else None,
+            'budget':     int(request.form.get('budget')) if request.form.get('budget') else None,
             'start_date': request.form.get('start_date') or None,
             'end_date':   request.form.get('end_date') or None,
-        }
-        supabase.table('projects').insert(data).execute()
-        return redirect(url_for('manage'))
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        }).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
 
 
-@app.route('/manage/projects/<project_id>', methods=['POST'])
+@app.route('/manage/projects/<project_id>/delete', methods=['POST'])
 @login_required
 def delete_project(project_id):
     try:
         supabase.table('projects').delete().eq('id', project_id).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
+
+
+@app.route('/manage/expenses', methods=['POST'])
+@login_required
+def create_expense():
+    user = get_current_user()
+    try:
+        supabase.table('expenses').insert({
+            'project_id':   request.form.get('project_id'),
+            'user_id':      user.id,
+            'amount':       int(request.form.get('amount', 0)),
+            'description':  request.form.get('description', ''),
+            'expense_type': request.form.get('expense_type', ''),
+            'expense_date': request.form.get('expense_date') or None,
+        }).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
+
+
+@app.route('/manage/expenses/<expense_id>/delete', methods=['POST'])
+@login_required
+def delete_expense(expense_id):
+    try:
+        supabase.table('expenses').delete().eq('id', expense_id).execute()
     except Exception:
         pass
     return redirect(url_for('manage'))

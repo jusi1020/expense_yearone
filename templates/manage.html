@@ -7,72 +7,138 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     :root {
-      --bg: #f8fafc; --surface: #ffffff; --surface2: #f1f5f9;
-      --text: #1e293b; --text-muted: #64748b; --border: #e5e7eb;
-      --primary: #4f46e5; --primary-light: #eef2ff;
-      --success: #10b981; --shadow: 0 1px 3px rgba(0,0,0,.08);
+      --bg:#f8fafc; --surface:#fff; --surface2:#f1f5f9; --text:#1e293b;
+      --text-muted:#64748b; --border:#e5e7eb; --primary:#4f46e5;
+      --primary-light:#eef2ff; --success:#10b981; --danger:#ef4444;
     }
     [data-theme="dark"] {
-      --bg: #0f172a; --surface: #1e293b; --surface2: #293548;
-      --text: #f1f5f9; --text-muted: #94a3b8; --border: #334155;
-      --primary: #818cf8; --primary-light: #1e1b4b;
-      --success: #34d399; --shadow: 0 1px 3px rgba(0,0,0,.4);
+      --bg:#0f172a; --surface:#1e293b; --surface2:#293548; --text:#f1f5f9;
+      --text-muted:#94a3b8; --border:#334155; --primary:#818cf8;
+      --primary-light:#1e1b4b; --success:#34d399; --danger:#f87171;
     }
-    body      { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; transition: background .25s, color .25s; }
-    .navbar   { background: var(--surface) !important; border-bottom: 1px solid var(--border); }
+    body      { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; transition:background .25s,color .25s; }
+    .navbar   { background:var(--surface)!important; border-bottom:1px solid var(--border); }
     .nav-tab  { font-size:.83rem; font-weight:600; color:var(--text-muted); text-decoration:none; padding:.35rem .85rem; border-radius:8px; transition:all .15s; }
     .nav-tab:hover  { background:var(--surface2); color:var(--text); }
     .nav-tab.active { background:var(--primary-light); color:var(--primary); }
     .nav-auth-btn { font-size:.82rem; color:var(--text-muted); text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:.3rem .75rem; background:var(--surface2); }
     .dark-toggle  { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:.3rem .75rem; cursor:pointer; font-size:.82rem; color:var(--text); }
 
-    .card-surf { background: var(--surface); border-color: var(--border) !important; border-radius: 14px; }
-    .section-title { font-size:.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:1rem; }
+    /* ── Lab No-state ── */
+    .no-lab-box { max-width:480px; margin:4rem auto; text-align:center; }
+    .no-lab-box h4 { font-weight:700; margin-bottom:.5rem; }
+    .no-lab-box p  { color:var(--text-muted); font-size:.9rem; margin-bottom:2rem; }
+    .action-card {
+      background:var(--surface); border:1.5px solid var(--border); border-radius:14px;
+      padding:1.5rem; text-align:left; transition:border-color .15s;
+    }
+    .action-card:hover { border-color:var(--primary); }
+    .action-card h6 { font-weight:700; margin-bottom:.75rem; }
 
+    /* ── Lab header ── */
+    .lab-header {
+      background:var(--surface); border:1px solid var(--border); border-radius:14px;
+      padding:1.1rem 1.5rem; margin-bottom:1.5rem;
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem;
+    }
+    .lab-name  { font-weight:700; font-size:1.1rem; }
+    .invite-code-box {
+      display:flex; align-items:center; gap:.5rem;
+      background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+      padding:.35rem .75rem; font-size:.82rem;
+    }
+    .invite-code { font-family:monospace; font-weight:700; font-size:.95rem; color:var(--primary); letter-spacing:.1em; }
+    .copy-btn { background:none; border:none; cursor:pointer; font-size:.85rem; color:var(--text-muted); }
+    .copy-btn:hover { color:var(--primary); }
+
+    /* ── Section title ── */
+    .sec-title { font-size:.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:1rem; }
+
+    /* ── Project card ── */
     .project-card {
-      background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
-      padding: 1.1rem 1.25rem; transition: border-color .15s;
+      background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
+      overflow:hidden; margin-bottom:1rem; transition:border-color .15s;
     }
-    .project-card:hover { border-color: var(--primary); }
-    .project-name  { font-weight: 700; font-size: .95rem; }
-    .project-meta  { font-size: .78rem; color: var(--text-muted); margin-top: .25rem; }
-    .budget-badge  {
-      background: var(--primary-light); color: var(--primary);
-      border-radius: 8px; padding: .2rem .65rem; font-size: .78rem; font-weight: 700;
-    }
+    .project-card:hover { border-color:var(--primary); }
+    .project-header { padding:1rem 1.25rem; cursor:pointer; display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
+    .project-name  { font-weight:700; font-size:.95rem; margin-bottom:.2rem; }
+    .project-meta  { font-size:.76rem; color:var(--text-muted); }
+    .project-badges { display:flex; align-items:center; gap:.5rem; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
+    .budget-badge  { background:var(--primary-light); color:var(--primary); border-radius:8px; padding:.2rem .65rem; font-size:.76rem; font-weight:700; white-space:nowrap; }
+    .spent-badge   { background:#f0fdf4; color:#16a34a; border-radius:8px; padding:.2rem .65rem; font-size:.76rem; font-weight:700; white-space:nowrap; }
+    .progress-bar-wrap { padding:0 1.25rem .5rem; }
+    .progress-bar-bg { background:var(--surface2); border-radius:99px; height:6px; overflow:hidden; }
+    .progress-bar-fill { height:100%; border-radius:99px; background:var(--success); transition:width .3s; }
+    .progress-bar-fill.over { background:var(--danger); }
 
-    .form-label   { font-size:.83rem; font-weight:600; color:var(--text); }
+    /* ── Expense list ── */
+    .expense-panel { border-top:1px solid var(--border); padding:0; display:none; }
+    .expense-panel.open { display:block; }
+    .expense-row {
+      display:flex; align-items:center; gap:.75rem; padding:.6rem 1.25rem;
+      font-size:.8rem; border-bottom:1px solid var(--border); color:var(--text);
+    }
+    .expense-row:last-child { border-bottom:none; }
+    .expense-date { color:var(--text-muted); width:72px; flex-shrink:0; }
+    .expense-type-tag {
+      background:var(--surface2); border-radius:6px; padding:.15rem .5rem;
+      font-size:.72rem; color:var(--text-muted); flex-shrink:0; white-space:nowrap;
+    }
+    .expense-desc { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .expense-amount { font-weight:700; color:var(--primary); white-space:nowrap; }
+    .expense-del { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.78rem; flex-shrink:0; }
+    .expense-del:hover { color:var(--danger); }
+    .expense-add-btn {
+      display:block; width:100%; padding:.6rem; text-align:center;
+      background:var(--surface2); border:none; font-size:.8rem; color:var(--primary);
+      font-weight:600; cursor:pointer; border-top:1px solid var(--border);
+      transition:background .15s;
+    }
+    .expense-add-btn:hover { background:var(--primary-light); }
+    .no-expense { padding:.85rem 1.25rem; font-size:.8rem; color:var(--text-muted); text-align:center; }
+
+    /* ── FAB ── */
+    .fab {
+      position:fixed; bottom:2rem; right:2rem;
+      background:var(--primary); color:#fff; border:none; border-radius:50%;
+      width:52px; height:52px; font-size:1.4rem; cursor:pointer;
+      box-shadow:0 4px 16px rgba(79,70,229,.35); transition:filter .2s;
+    }
+    .fab:hover { filter:brightness(1.1); }
+
+    /* ── Forms / Modals ── */
+    .modal-content { background:var(--surface); color:var(--text); border-color:var(--border); }
+    .modal-header, .modal-footer { border-color:var(--border); }
+    .form-label  { font-size:.83rem; font-weight:600; }
     .form-control, .form-select {
-      background: var(--surface2); color: var(--text); border-color: var(--border);
-      border-radius: 8px; font-size: .87rem;
+      background:var(--surface2); color:var(--text); border-color:var(--border);
+      border-radius:8px; font-size:.87rem;
     }
     .form-control:focus, .form-select:focus {
-      background: var(--surface2); color: var(--text);
-      border-color: var(--primary); box-shadow: none;
+      background:var(--surface2); color:var(--text);
+      border-color:var(--primary); box-shadow:none;
     }
     .btn-primary-themed {
-      background: var(--primary); color: #fff; border: none; border-radius: 10px;
-      padding: .55rem 1.5rem; font-size: .88rem; font-weight: 600;
+      background:var(--primary); color:#fff; border:none;
+      border-radius:8px; padding:.55rem 1.2rem; font-size:.88rem; font-weight:600;
     }
-    .btn-primary-themed:hover { filter: brightness(1.1); color: #fff; }
-    .btn-danger-sm {
-      background: none; border: none; color: #ef4444; font-size: .8rem; cursor: pointer; padding: .2rem .5rem;
+    .btn-primary-themed:hover { filter:brightness(1.1); color:#fff; }
+    .btn-secondary-themed {
+      background:var(--surface2); color:var(--text); border:1px solid var(--border);
+      border-radius:8px; padding:.45rem 1rem; font-size:.85rem;
     }
-    .btn-danger-sm:hover { background: #fef2f2; border-radius: 6px; }
-
-    .empty-state { text-align:center; color:var(--text-muted); padding: 3rem 1rem; font-size:.9rem; }
-
-    .no-lab-notice {
-      background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
-      padding: 1.25rem 1.5rem; font-size: .87rem; color: #92400e;
+    .del-project-btn {
+      background:none; border:none; color:var(--text-muted); font-size:.8rem; cursor:pointer;
     }
+    .del-project-btn:hover { color:var(--danger); }
   </style>
 </head>
 <body>
 
+<!-- Navbar -->
 <nav class="navbar px-4 py-2">
   <div class="d-flex align-items-center gap-3">
-    <img src="/static/pnu_logo.jpg" alt="부산대학교" style="height:44px; object-fit:contain;">
+    <img src="/static/pnu_logo.jpg" alt="부산대학교" style="height:44px;object-fit:contain;">
     <div class="d-flex gap-1">
       <a href="/" class="nav-tab">📄 처리 시스템</a>
       <a href="/manage" class="nav-tab active">📊 관리 시스템</a>
@@ -80,7 +146,7 @@
   </div>
   <div class="d-flex align-items-center gap-2">
     <button class="dark-toggle" onclick="toggleDark()">🌙 다크모드</button>
-    <span style="font-size:.8rem; color:var(--text-muted);">{{ user.email }}</span>
+    <span style="font-size:.8rem;color:var(--text-muted);">{{ user.email }}</span>
     <a href="/logout" class="nav-auth-btn">로그아웃</a>
   </div>
 </nav>
@@ -88,58 +154,129 @@
 <div class="container py-5" style="max-width:860px;">
 
   {% if not lab %}
-  <div class="no-lab-notice mb-4">
-    ⚠️ 연구실 정보가 연결되어 있지 않아요. 관리자에게 연구실 배정을 요청해주세요.
-  </div>
-  {% else %}
-  <div class="d-flex align-items-center justify-content-between mb-4">
-    <div>
-      <div class="section-title">연구실</div>
-      <h4 class="fw-bold mb-0" style="font-size:1.15rem;">{{ lab.name }}</h4>
+  <!-- ── 연구실 없음 ── -->
+  <div class="no-lab-box">
+    <h4>👋 연구실을 연결해주세요</h4>
+    <p>새 연구실을 만들거나, 기존 연구실의 참여코드로 가입할 수 있어요.</p>
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <div class="action-card">
+          <h6>🏛️ 연구실 만들기</h6>
+          <form method="POST" action="/manage/labs/create">
+            <input type="text" name="name" class="form-control mb-2" placeholder="연구실 이름" required>
+            <button type="submit" class="btn-primary-themed w-100">만들기</button>
+          </form>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <div class="action-card">
+          <h6>🔑 참여코드로 가입</h6>
+          <form method="POST" action="/manage/labs/join">
+            <input type="text" name="invite_code" class="form-control mb-2" placeholder="8자리 코드 입력" maxlength="8" style="letter-spacing:.15em;font-family:monospace;" required>
+            <button type="submit" class="btn-primary-themed w-100">가입하기</button>
+          </form>
+        </div>
+      </div>
     </div>
+  </div>
+
+  {% else %}
+  <!-- ── 연구실 헤더 ── -->
+  <div class="lab-header">
+    <div>
+      <div class="sec-title" style="margin-bottom:.2rem;">연구실</div>
+      <div class="lab-name">🏛️ {{ lab.name }}</div>
+    </div>
+    {% if role == 'admin' %}
+    <div>
+      <div class="sec-title" style="margin-bottom:.2rem;">참여코드</div>
+      <div class="invite-code-box">
+        <span class="invite-code" id="invite-code-text">{{ lab.invite_code }}</span>
+        <button class="copy-btn" onclick="copyCode()" title="복사">📋</button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── 과제 목록 ── -->
+  <div class="sec-title">📁 과제 목록</div>
+
+  {% if not projects %}
+  <div style="text-align:center;color:var(--text-muted);padding:2.5rem;font-size:.9rem;">
+    📭 등록된 과제가 없어요. 아래 버튼으로 추가해보세요!
   </div>
   {% endif %}
 
-  <div class="row g-4">
+  {% for p in projects %}
+  <div class="project-card">
+    <div class="project-header" onclick="toggleExpenses('{{ p.id }}')">
+      <div style="flex:1;min-width:0;">
+        <div class="project-name">{{ p.name }}</div>
+        <div class="project-meta">
+          {% if p.pi_name %}👩‍🔬 {{ p.pi_name }}{% endif %}
+          {% if p.start_date and p.end_date %}&nbsp;·&nbsp;📅 {{ p.start_date }} ~ {{ p.end_date }}{% endif %}
+        </div>
+      </div>
+      <div class="project-badges">
+        {% if p.budget %}
+        <span class="budget-badge">예산 {{ "{:,}".format(p.budget) }}원</span>
+        {% endif %}
+        <span class="spent-badge">지출 {{ "{:,}".format(p.total_spent) }}원</span>
+        <form method="POST" action="/manage/projects/{{ p.id }}/delete" onsubmit="event.stopPropagation();return confirm('과제를 삭제할까요?')">
+          <button type="submit" class="del-project-btn" onclick="event.stopPropagation()">🗑</button>
+        </form>
+      </div>
+    </div>
 
-    <!-- 과제 목록 -->
-    <div class="col-12 col-lg-7">
-      <div class="section-title">📁 과제 목록</div>
-      {% if projects %}
-        {% for p in projects %}
-        <div class="project-card mb-3">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <div class="project-name">{{ p.name }}</div>
-              <div class="project-meta">
-                {% if p.pi_name %}👩‍🔬 {{ p.pi_name }}{% endif %}
-                {% if p.start_date and p.end_date %} &nbsp;·&nbsp; 📅 {{ p.start_date }} ~ {{ p.end_date }}{% endif %}
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              {% if p.budget %}
-              <span class="budget-badge">{{ "{:,}".format(p.budget) }}원</span>
-              {% endif %}
-              <form method="POST" action="/manage/projects/{{ p.id }}" onsubmit="return confirm('삭제할까요?')">
-                <button type="submit" class="btn-danger-sm">✕</button>
-              </form>
-            </div>
-          </div>
+    {% if p.budget and p.budget > 0 %}
+    {% set pct = [((p.total_spent / p.budget) * 100)|int, 100]|min %}
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill {% if p.total_spent > p.budget %}over{% endif %}"
+             style="width:{{ pct }}%"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="expense-panel" id="panel-{{ p.id }}">
+      {% if p.expenses %}
+        {% for e in p.expenses %}
+        <div class="expense-row">
+          <span class="expense-date">{{ e.expense_date or '' }}</span>
+          <span class="expense-type-tag">{{ e.expense_type or '기타' }}</span>
+          <span class="expense-desc">{{ e.description or '-' }}</span>
+          <span class="expense-amount">{{ "{:,}".format(e.amount) }}원</span>
+          <form method="POST" action="/manage/expenses/{{ e.id }}/delete" style="margin:0">
+            <button type="submit" class="expense-del" onclick="return confirm('삭제할까요?')">✕</button>
+          </form>
         </div>
         {% endfor %}
       {% else %}
-        <div class="empty-state">📭 등록된 과제가 없어요</div>
+        <div class="no-expense">아직 지출 내역이 없어요</div>
       {% endif %}
+      <button class="expense-add-btn" onclick="openAddExpense('{{ p.id }}', '{{ p.name }}')">+ 지출 추가</button>
     </div>
+  </div>
+  {% endfor %}
+  {% endif %}
 
-    <!-- 과제 추가 폼 -->
-    <div class="col-12 col-lg-5">
-      <div class="card-surf p-4">
-        <div class="section-title">➕ 새 과제 등록</div>
-        {% if not lab %}
-        <p style="font-size:.83rem; color:var(--text-muted);">연구실 배정 후 과제를 등록할 수 있어요.</p>
-        {% else %}
-        <form method="POST" action="/manage/projects">
+</div>
+
+<!-- FAB: 과제 추가 -->
+{% if lab %}
+<button class="fab" onclick="document.getElementById('projectModal').querySelector('[data-bs-toggle]') || new bootstrap.Modal(document.getElementById('projectModal')).show()" title="과제 추가">＋</button>
+{% endif %}
+
+<!-- 과제 추가 모달 -->
+<div class="modal fade" id="projectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📁 새 과제 등록</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="/manage/projects">
+        <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">과제명 *</label>
             <input type="text" name="name" class="form-control" placeholder="예: 2025년도 BK21 연구과제" required>
@@ -152,7 +289,7 @@
             <label class="form-label">총 예산 (원)</label>
             <input type="number" name="budget" class="form-control" placeholder="예: 50000000">
           </div>
-          <div class="row g-2 mb-4">
+          <div class="row g-2">
             <div class="col">
               <label class="form-label">시작일</label>
               <input type="date" name="start_date" class="form-control">
@@ -162,22 +299,101 @@
               <input type="date" name="end_date" class="form-control">
             </div>
           </div>
-          <button type="submit" class="btn-primary-themed w-100">등록하기</button>
-        </form>
-        {% endif %}
-      </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-themed" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn-primary-themed">등록하기</button>
+        </div>
+      </form>
     </div>
-
   </div>
 </div>
 
+<!-- 지출 추가 모달 -->
+<div class="modal fade" id="expenseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">💸 지출 추가</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="/manage/expenses">
+        <div class="modal-body">
+          <input type="hidden" name="project_id" id="exp-project-id">
+          <div class="mb-2 p-2 rounded" style="background:var(--primary-light);font-size:.82rem;color:var(--primary);font-weight:600;" id="exp-project-name"></div>
+          <div class="mb-3">
+            <label class="form-label">지출 유형</label>
+            <select name="expense_type" class="form-select">
+              <option value="">선택 안 함</option>
+              {% for key, info in expense_types.items() %}
+              <option value="{{ info.name }}">{{ info.category_icon }} {{ info.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">금액 (원) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="예: 150000" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">내용</label>
+            <input type="text" name="description" class="form-control" placeholder="예: 시약 구매 - ○○상사">
+          </div>
+          <div class="mb-1">
+            <label class="form-label">지출일</label>
+            <input type="date" name="expense_date" class="form-control" id="exp-date">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-themed" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn-primary-themed">추가하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-msg" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:.6rem 1.2rem;border-radius:10px;font-size:.82rem;z-index:9999;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // Dark mode
   function toggleDark() {
     const html = document.documentElement;
     const isDark = html.dataset.theme === 'dark';
     html.dataset.theme = isDark ? 'light' : 'dark';
     document.querySelector('.dark-toggle').textContent = isDark ? '🌙 다크모드' : '☀️ 라이트모드';
+  }
+
+  // FAB → 과제 추가 모달
+  document.querySelector('.fab') && document.querySelector('.fab').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('projectModal')).show();
+  });
+
+  // 지출 패널 토글
+  function toggleExpenses(pid) {
+    const panel = document.getElementById('panel-' + pid);
+    panel.classList.toggle('open');
+  }
+
+  // 지출 추가 모달
+  function openAddExpense(pid, pname) {
+    document.getElementById('exp-project-id').value   = pid;
+    document.getElementById('exp-project-name').textContent = '📁 ' + pname;
+    document.getElementById('exp-date').value = new Date().toISOString().slice(0,10);
+    new bootstrap.Modal(document.getElementById('expenseModal')).show();
+  }
+
+  // 참여코드 복사
+  function copyCode() {
+    const code = document.getElementById('invite-code-text').textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('참여코드가 복사됐어요!'));
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 2500);
   }
 </script>
 </body>
