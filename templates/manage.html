@@ -127,6 +127,7 @@
       background:var(--surface2); color:var(--text); border:1px solid var(--border);
       border-radius:8px; padding:.45rem 1rem; font-size:.85rem;
     }
+    .breakdown-table { border-top: 1px solid var(--border); overflow-x: auto; }
     .del-project-btn {
       background:none; border:none; color:var(--text-muted); font-size:.8rem; cursor:pointer;
     }
@@ -222,6 +223,10 @@
         <span class="budget-badge">예산 {{ "{:,}".format(p.budget) }}원</span>
         {% endif %}
         <span class="spent-badge">지출 {{ "{:,}".format(p.total_spent) }}원</span>
+        {% if p.budget_breakdown %}
+        <button type="button" class="byeolji-chip" style="border:none;cursor:pointer;font-size:.72rem;"
+                onclick="event.stopPropagation();toggleBreakdown('{{ p.id }}')">📊 세목</button>
+        {% endif %}
         <form method="POST" action="/manage/projects/{{ p.id }}/delete" onsubmit="event.stopPropagation();return confirm('과제를 삭제할까요?')">
           <button type="submit" class="del-project-btn" onclick="event.stopPropagation()">🗑</button>
         </form>
@@ -235,6 +240,48 @@
         <div class="progress-bar-fill {% if p.total_spent > p.budget %}over{% endif %}"
              style="width:{{ pct }}%"></div>
       </div>
+    </div>
+    {% endif %}
+
+    {% if p.budget_breakdown %}
+    <div class="breakdown-table" id="breakdown-{{ p.id }}" style="display:none;">
+      <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+        <thead>
+          <tr style="background:var(--surface2);">
+            <th style="padding:.45rem .75rem;text-align:left;color:var(--text-muted);font-weight:600;">세목</th>
+            <th style="padding:.45rem .75rem;text-align:right;color:var(--text-muted);font-weight:600;">예산</th>
+            <th style="padding:.45rem .75rem;text-align:right;color:var(--text-muted);font-weight:600;">지출</th>
+            <th style="padding:.45rem .75rem;text-align:right;color:var(--text-muted);font-weight:600;">잔액</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set spent_by_cat = {} %}
+          {% for e in p.expenses %}
+            {% if e.budget_category %}
+              {% set _ = spent_by_cat.update({e.budget_category: spent_by_cat.get(e.budget_category, 0) + e.amount}) %}
+            {% endif %}
+          {% endfor %}
+          {% for key, label in budget_categories %}
+            {% if p.budget_breakdown.get(key) %}
+            {% set budgeted = p.budget_breakdown[key] %}
+            {% set spent = spent_by_cat.get(key, 0) %}
+            {% set remain = budgeted - spent %}
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:.4rem .75rem;color:var(--text);">{{ label }}</td>
+              <td style="padding:.4rem .75rem;text-align:right;">{{ "{:,}".format(budgeted) }}</td>
+              <td style="padding:.4rem .75rem;text-align:right;color:{% if spent > 0 %}var(--primary){% else %}var(--text-muted){% endif %};">{{ "{:,}".format(spent) }}</td>
+              <td style="padding:.4rem .75rem;text-align:right;font-weight:600;color:{% if remain < 0 %}var(--danger){% else %}var(--success){% endif %};">{{ "{:,}".format(remain) }}</td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+          <tr style="border-top:2px solid var(--border);background:var(--surface2);">
+            <td style="padding:.45rem .75rem;font-weight:700;">총계</td>
+            <td style="padding:.45rem .75rem;text-align:right;font-weight:700;">{{ "{:,}".format(p.budget) }}</td>
+            <td style="padding:.45rem .75rem;text-align:right;font-weight:700;color:var(--primary);">{{ "{:,}".format(p.total_spent) }}</td>
+            <td style="padding:.45rem .75rem;text-align:right;font-weight:700;color:{% if p.total_spent > p.budget %}var(--danger){% else %}var(--success){% endif %};">{{ "{:,}".format(p.budget - p.total_spent) }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     {% endif %}
 
@@ -269,7 +316,7 @@
 
 <!-- 과제 추가 모달 -->
 <div class="modal fade" id="projectModal" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">📁 새 과제 등록</h5>
@@ -277,27 +324,44 @@
       </div>
       <form method="POST" action="/manage/projects">
         <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">과제명 *</label>
-            <input type="text" name="name" class="form-control" placeholder="예: 2025년도 BK21 연구과제" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">담당 교수님</label>
-            <input type="text" name="pi_name" class="form-control" placeholder="예: 홍길동">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">총 예산 (원)</label>
-            <input type="number" name="budget" class="form-control" placeholder="예: 50000000">
-          </div>
-          <div class="row g-2">
-            <div class="col">
+          <!-- 기본 정보 -->
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label">과제명 *</label>
+              <input type="text" name="name" class="form-control" placeholder="예: 2025년도 BK21 연구과제" required>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label">담당 교수님</label>
+              <input type="text" name="pi_name" class="form-control" placeholder="예: 홍길동">
+            </div>
+            <div class="col-6 col-sm-3">
               <label class="form-label">시작일</label>
               <input type="date" name="start_date" class="form-control">
             </div>
-            <div class="col">
+            <div class="col-6 col-sm-3">
               <label class="form-label">종료일</label>
               <input type="date" name="end_date" class="form-control">
             </div>
+          </div>
+
+          <hr style="border-color:var(--border);">
+
+          <!-- 세목별 예산 -->
+          <div style="font-size:.83rem; font-weight:700; margin-bottom:.75rem;">💰 세목별 예산 (원)</div>
+          <div class="row g-2">
+            {% for key, label in budget_categories %}
+            <div class="col-12 col-sm-6">
+              <label class="form-label" style="font-size:.78rem;">{{ label }}</label>
+              <input type="number" name="budget_{{ key }}" class="form-control budget-input"
+                     placeholder="0" min="0" oninput="updateBudgetTotal()">
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center"
+               style="background:var(--primary-light); border:1px solid var(--primary);">
+            <span style="font-weight:700; font-size:.9rem; color:var(--primary);">총계</span>
+            <span style="font-weight:800; font-size:1.05rem; color:var(--primary);" id="budget-total-display">0원</span>
           </div>
         </div>
         <div class="modal-footer">
@@ -321,6 +385,15 @@
         <div class="modal-body">
           <input type="hidden" name="project_id" id="exp-project-id">
           <div class="mb-2 p-2 rounded" style="background:var(--primary-light);font-size:.82rem;color:var(--primary);font-weight:600;" id="exp-project-name"></div>
+          <div class="mb-3">
+            <label class="form-label">세목 (예산 항목)</label>
+            <select name="budget_category" class="form-select" id="exp-budget-cat">
+              <option value="">선택 안 함</option>
+              {% for key, label in budget_categories %}
+              <option value="{{ key }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
           <div class="mb-3">
             <label class="form-label">지출 유형</label>
             <select name="expense_type" class="form-select">
@@ -373,6 +446,23 @@
   function toggleExpenses(pid) {
     const panel = document.getElementById('panel-' + pid);
     panel.classList.toggle('open');
+  }
+
+  // 세목 테이블 토글
+  function toggleBreakdown(pid) {
+    const el = document.getElementById('breakdown-' + pid);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // 예산 합계 계산
+  function updateBudgetTotal() {
+    let total = 0;
+    document.querySelectorAll('.budget-input').forEach(el => {
+      total += parseInt(el.value || 0, 10);
+    });
+    document.getElementById('budget-total-display').textContent =
+      total.toLocaleString('ko-KR') + '원';
   }
 
   // 지출 추가 모달

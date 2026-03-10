@@ -44,6 +44,25 @@ def get_current_user():
 def generate_invite_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
+# 세목별 예산 카테고리
+BUDGET_CATEGORIES = [
+    ('student_labor',     '학생인건비'),
+    ('equipment',         '연구시설·장비비'),
+    ('materials',         '연구재료비'),
+    ('trip_domestic',     '연구활동비 - 국내출장여비'),
+    ('trip_overseas',     '연구활동비 - 국외출장여비'),
+    ('meeting',           '연구활동비 - 회의비'),
+    ('seminar',           '연구활동비 - 세미나개최비'),
+    ('expert',            '연구활동비 - 전문가활용비'),
+    ('software',          '연구활동비 - 소프트웨어활용비'),
+    ('lab_ops',           '연구활동비 - 연구실운영비'),
+    ('conference',        '연구활동비 - 학회참가비'),
+    ('education',         '연구활동비 - 교육훈련비'),
+    ('other_activity',    '연구활동비 - 기타'),
+    ('research_allowance','연구수당'),
+    ('indirect',          '간접비'),
+]
+
 BYEOLJI_DIR        = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
 INGEBI_BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '인건비_별지')
 
@@ -867,7 +886,8 @@ def manage():
         projects, lab, role = [], None, 'member'
 
     return render_template('manage.html', user=user, projects=projects,
-                           lab=lab, role=role, expense_types=EXPENSE_TYPES)
+                           lab=lab, role=role, expense_types=EXPENSE_TYPES,
+                           budget_categories=BUDGET_CATEGORIES)
 
 
 @app.route('/manage/labs/create', methods=['POST'])
@@ -910,13 +930,21 @@ def create_project():
         lab_id  = profile.data.get('lab_id')
         if not lab_id:
             return redirect(url_for('manage'))
+        breakdown = {}
+        total = 0
+        for key, _ in BUDGET_CATEGORIES:
+            val = request.form.get(f'budget_{key}', '')
+            if val:
+                breakdown[key] = int(val)
+                total += int(val)
         supabase.table('projects').insert({
-            'lab_id':     lab_id,
-            'name':       request.form.get('name'),
-            'pi_name':    request.form.get('pi_name'),
-            'budget':     int(request.form.get('budget')) if request.form.get('budget') else None,
-            'start_date': request.form.get('start_date') or None,
-            'end_date':   request.form.get('end_date') or None,
+            'lab_id':           lab_id,
+            'name':             request.form.get('name'),
+            'pi_name':          request.form.get('pi_name'),
+            'budget':           total if total > 0 else (int(request.form.get('budget')) if request.form.get('budget') else None),
+            'budget_breakdown': breakdown if breakdown else None,
+            'start_date':       request.form.get('start_date') or None,
+            'end_date':         request.form.get('end_date') or None,
         }).execute()
     except Exception:
         pass
@@ -939,12 +967,13 @@ def create_expense():
     user = get_current_user()
     try:
         supabase.table('expenses').insert({
-            'project_id':   request.form.get('project_id'),
-            'user_id':      user.id,
-            'amount':       int(request.form.get('amount', 0)),
-            'description':  request.form.get('description', ''),
-            'expense_type': request.form.get('expense_type', ''),
-            'expense_date': request.form.get('expense_date') or None,
+            'project_id':      request.form.get('project_id'),
+            'user_id':         user.id,
+            'amount':          int(request.form.get('amount', 0)),
+            'description':     request.form.get('description', ''),
+            'expense_type':    request.form.get('expense_type', ''),
+            'budget_category': request.form.get('budget_category', ''),
+            'expense_date':    request.form.get('expense_date') or None,
         }).execute()
     except Exception:
         pass
