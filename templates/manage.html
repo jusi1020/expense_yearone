@@ -274,37 +274,65 @@
       <div class="sec-title" style="margin-bottom:0;">🗂 세목별 현황 (전체 과제 합산)</div>
       <span id="cat-icon" style="font-size:.8rem; color:var(--text-muted);">▲</span>
     </div>
-    <div id="cat-body" style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.25rem;">
-      {% set total_cat_budget  = cat_summary.values() | sum(attribute='budgeted') %}
-      {% set total_cat_spent   = cat_summary.values() | sum(attribute='spent') %}
+    <div id="cat-body" style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+      {% set total_cat_budget = cat_summary.values() | sum(attribute='budgeted') %}
+      {% set total_cat_spent  = cat_summary.values() | sum(attribute='spent') %}
+
+      <!-- 헤더 -->
+      <div style="display:grid; grid-template-columns:1fr 110px 110px 110px; gap:.5rem; padding:.5rem 1.25rem; background:var(--surface2); font-size:.73rem; font-weight:700; color:var(--text-muted);">
+        <span>세목 / 과제</span>
+        <span style="text-align:right;">예산</span>
+        <span style="text-align:right;">지출</span>
+        <span style="text-align:right;">잔액</span>
+      </div>
+
       {% for key, v in cat_summary.items() %}
-      {% set pct  = [((v.spent / v.budgeted * 100)|int if v.budgeted else 0), 100]|min %}
       {% set over = v.spent > v.budgeted %}
-      <div class="breakdown-row">
-        <div class="breakdown-labels">
-          <span class="breakdown-cat">{{ v.label }}</span>
-          <span class="breakdown-nums">
-            <span style="color:{% if over %}var(--danger){% else %}var(--primary){% endif %}; font-weight:600;">{{ "{:,}".format(v.spent) }}</span>
-            &nbsp;/&nbsp;{{ "{:,}".format(v.budgeted) }}원
-            &nbsp;
-            <span style="color:{% if over %}var(--danger){% else %}var(--success){% endif %}; font-weight:700;">(잔{{ "{:,}".format(v.remaining) }})</span>
+      {% set pct  = [((v.spent / v.budgeted * 100)|int if v.budgeted else 0), 100]|min %}
+
+      <!-- 세목 행 -->
+      <div style="border-top:1px solid var(--border);">
+        <div style="display:grid; grid-template-columns:1fr 110px 110px 110px; gap:.5rem; padding:.6rem 1.25rem; align-items:center; cursor:pointer; background:var(--surface2);"
+             onclick="toggleCatDetail('catd-{{ key }}', 'cati-{{ key }}')">
+          <span style="font-size:.82rem; font-weight:700; color:var(--text);">
+            <span id="cati-{{ key }}" style="font-size:.7rem; color:var(--text-muted); margin-right:.3rem;">▶</span>
+            {{ v.label }}
+          </span>
+          <span style="font-size:.8rem; text-align:right; color:var(--text-muted);">{{ "{:,}".format(v.budgeted) }}</span>
+          <span style="font-size:.8rem; text-align:right; color:var(--primary); font-weight:600;">{{ "{:,}".format(v.spent) }}</span>
+          <span style="font-size:.8rem; text-align:right; font-weight:700; color:{% if over %}var(--danger){% else %}var(--success){% endif %};">
+            {{ "{:,}".format(v.remaining) }}
           </span>
         </div>
-        <div class="breakdown-bar-bg">
-          <div class="breakdown-bar-fill"
-               style="width:{{ pct }}%; background:{% if over %}var(--danger){% elif pct > 80 %}#f59e0b{% else %}var(--success){% endif %};"></div>
+        <!-- 바 -->
+        <div style="padding:0 1.25rem .4rem; background:var(--surface2);">
+          <div class="breakdown-bar-bg" style="height:4px;">
+            <div class="breakdown-bar-fill" style="width:{{ pct }}%; background:{% if over %}var(--danger){% elif pct > 80 %}#f59e0b{% else %}var(--success){% endif %};"></div>
+          </div>
+        </div>
+
+        <!-- 과제별 상세 (펼침) -->
+        <div id="catd-{{ key }}" style="display:none;">
+          {% for proj in v.projects %}
+          {% set pover = proj.spent > proj.budgeted %}
+          <div style="display:grid; grid-template-columns:1fr 110px 110px 110px; gap:.5rem; padding:.45rem 1.25rem .45rem 2rem; border-top:1px solid var(--border); align-items:center;">
+            <span style="font-size:.78rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📁 {{ proj.name }}</span>
+            <span style="font-size:.78rem; text-align:right; color:var(--text-muted);">{{ "{:,}".format(proj.budgeted) if proj.budgeted else '-' }}</span>
+            <span style="font-size:.78rem; text-align:right; color:{% if proj.spent > 0 %}var(--primary){% else %}var(--text-muted){% endif %}; font-weight:600;">{{ "{:,}".format(proj.spent) }}</span>
+            <span style="font-size:.78rem; text-align:right; font-weight:700; color:{% if pover %}var(--danger){% else %}var(--success){% endif %};">{{ "{:,}".format(proj.remaining) }}</span>
+          </div>
+          {% endfor %}
         </div>
       </div>
       {% endfor %}
-      <div class="breakdown-total-row">
+
+      <!-- 전체 합계 -->
+      <div style="display:grid; grid-template-columns:1fr 110px 110px 110px; gap:.5rem; padding:.65rem 1.25rem; border-top:2px solid var(--border); background:var(--surface2); font-size:.83rem; font-weight:700;">
         <span>전체 합계</span>
-        <span>
-          <span style="color:var(--primary);">{{ "{:,}".format(total_cat_spent) }}</span>
-          &nbsp;/&nbsp;{{ "{:,}".format(total_cat_budget) }}원
-          &nbsp;
-          <span style="color:{% if total_cat_spent > total_cat_budget %}var(--danger){% else %}var(--success){% endif %}; font-weight:700;">
-            (잔{{ "{:,}".format(total_cat_budget - total_cat_spent) }})
-          </span>
+        <span style="text-align:right; color:var(--text-muted);">{{ "{:,}".format(total_cat_budget) }}</span>
+        <span style="text-align:right; color:var(--primary);">{{ "{:,}".format(total_cat_spent) }}</span>
+        <span style="text-align:right; color:{% if total_cat_spent > total_cat_budget %}var(--danger){% else %}var(--success){% endif %};">
+          {{ "{:,}".format(total_cat_budget - total_cat_spent) }}
         </span>
       </div>
     </div>
@@ -661,6 +689,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // 세목 상세 토글
+  function toggleCatDetail(bodyId, iconId) {
+    const body = document.getElementById(bodyId);
+    const icon = document.getElementById(iconId);
+    const open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    icon.textContent   = open ? '▼' : '▶';
+  }
+
   // 섹션 접기/펼치기
   function toggleSection(bodyId, iconId) {
     const body = document.getElementById(bodyId);
