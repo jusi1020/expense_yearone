@@ -2,3 +2,6 @@ flask
 pypdf
 pillow
 gunicorn
+supabase
+python-dotenv
+flask-login
