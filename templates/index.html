@@ -1,111 +1,156 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>연구비 처리 시스템</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
+    /* ── Theme Variables ─────────────────────────────────────────────────── */
     :root {
-      --primary: #4f46e5;
-      --primary-light: #eef2ff;
-      --success: #10b981;
-      --border: #e5e7eb;
+      --bg:           #f8fafc;
+      --surface:      #ffffff;
+      --surface2:     #f1f5f9;
+      --text:         #1e293b;
+      --text-muted:   #64748b;
+      --border:       #e5e7eb;
+      --primary:      #4f46e5;
+      --primary-light:#eef2ff;
+      --success:      #10b981;
+      --shadow:       0 1px 3px rgba(0,0,0,.08);
     }
-    body { background: #f8fafc; font-family: 'Segoe UI', sans-serif; color: #1e293b; }
-
-    /* Category */
-    .category-header {
-      font-size: .8rem;
-      font-weight: 700;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      padding: .4rem .2rem;
-      border-bottom: 2px solid var(--border);
-      margin-bottom: .8rem;
+    [data-theme="dark"] {
+      --bg:           #0f172a;
+      --surface:      #1e293b;
+      --surface2:     #293548;
+      --text:         #f1f5f9;
+      --text-muted:   #94a3b8;
+      --border:       #334155;
+      --primary:      #818cf8;
+      --primary-light:#1e1b4b;
+      --success:      #34d399;
+      --shadow:       0 1px 3px rgba(0,0,0,.4);
     }
 
-    /* Type Cards */
-    .type-card {
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem .75rem;
-      cursor: pointer;
-      transition: all .18s;
-      text-align: center;
-      background: #fff;
-      height: 100%;
-    }
-    .type-card:hover  { border-color: var(--primary); background: var(--primary-light); }
-    .type-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
-    .type-card .icon  { font-size: 1.6rem; }
-    .type-card .label { font-size: .78rem; font-weight: 600; margin-top: .35rem; line-height: 1.3; }
+    /* ── Base ────────────────────────────────────────────────────────────── */
+    body        { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; transition: background .25s, color .25s; }
+    .card-surf  { background: var(--surface); border-color: var(--border) !important; }
 
-    /* Upload */
-    #upload-section { display: none; }
-    .doc-card {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      background: #fff;
-      transition: border-color .2s;
+    /* ── Navbar ──────────────────────────────────────────────────────────── */
+    .navbar     { background: var(--surface) !important; border-bottom: 1px solid var(--border); }
+    .nav-title  { font-weight: 700; color: var(--text-muted); font-size: .95rem; border-left: 2px solid var(--border); padding-left: 1rem; }
+    .dark-toggle {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+      padding: .3rem .75rem; cursor: pointer; font-size: .82rem; color: var(--text); transition: all .2s;
     }
-    .doc-card.has-file { border-color: var(--success); border-style: solid; }
-    .doc-title { font-weight: 600; font-size: .88rem; }
-    .badge-required { font-size: .68rem; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 2px 6px; }
-    .badge-optional  { font-size: .68rem; background: #f3f4f6; color: #6b7280; border-radius: 6px; padding: 2px 6px; }
+    .dark-toggle:hover { border-color: var(--primary); }
 
-    .drop-zone {
-      border: 1.5px dashed #c7d2fe;
-      border-radius: 8px;
-      padding: .65rem;
-      text-align: center;
-      cursor: pointer;
-      background: #fafafa;
-      font-size: .78rem;
-      color: #94a3b8;
-      transition: background .2s;
-    }
-    .drop-zone:hover, .drop-zone.dragover { background: var(--primary-light); border-color: var(--primary); }
-
-    .file-item {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #f8fafc; border-radius: 6px;
-      padding: .3rem .6rem; font-size: .75rem; margin-top: .3rem;
-    }
-    .remove-btn { cursor: pointer; color: #ef4444; border: none; background: none; font-size: .85rem; }
-
-    /* Merge */
-    .btn-merge {
-      background: var(--primary); color: #fff; border: none;
-      border-radius: 10px; padding: .7rem 2.2rem;
-      font-size: .95rem; font-weight: 600; transition: background .2s;
-    }
-    .btn-merge:hover    { background: #4338ca; color: #fff; }
-    .btn-merge:disabled { background: #a5b4fc; cursor: not-allowed; }
-
+    /* ── Step badge ──────────────────────────────────────────────────────── */
     .step-badge {
       display: inline-flex; align-items: center; justify-content: center;
       width: 26px; height: 26px; background: var(--primary); color: #fff;
       border-radius: 50%; font-size: .78rem; font-weight: 700; margin-right: .5rem; flex-shrink: 0;
     }
 
-    /* Info button */
+    /* ── Category ────────────────────────────────────────────────────────── */
+    .category-header {
+      font-size: .78rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .05em;
+      padding: .4rem .2rem; border-bottom: 2px solid var(--border); margin-bottom: .8rem;
+    }
+
+    /* ── Type Cards ──────────────────────────────────────────────────────── */
+    .type-card {
+      border: 2px solid var(--border); border-radius: 12px; padding: 1rem .75rem;
+      cursor: pointer; transition: all .18s; text-align: center;
+      background: var(--surface); height: 100%; position: relative;
+    }
+    .type-card:hover   { border-color: var(--primary); background: var(--primary-light); }
+    .type-card.selected{ border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+    .type-card .icon   { font-size: 1.6rem; }
+    .type-card .label  { font-size: .78rem; font-weight: 600; margin-top: .35rem; line-height: 1.3; color: var(--text); }
     .info-btn {
-      position: absolute; top: 6px; right: 8px;
-      background: none; border: none; cursor: pointer;
-      font-size: .85rem; color: #94a3b8; padding: 0; line-height: 1;
+      position: absolute; top: 6px; right: 8px; background: none; border: none;
+      cursor: pointer; font-size: .82rem; color: var(--text-muted); padding: 0;
     }
     .info-btn:hover { color: var(--primary); }
-    .type-card { position: relative; }
 
-    /* Toast */
+    /* ── Doc Cards ───────────────────────────────────────────────────────── */
+    #upload-section { display: none; }
+    .doc-card {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 1rem;
+      background: var(--surface); transition: border-color .2s;
+    }
+    .doc-card.has-file { border-color: var(--success); border-style: solid; }
+    .doc-title         { font-weight: 600; font-size: .88rem; color: var(--text); }
+
+    .drop-zone {
+      border: 1.5px dashed #c7d2fe; border-radius: 8px; padding: .65rem;
+      text-align: center; cursor: pointer; background: var(--surface2);
+      font-size: .78rem; color: var(--text-muted); transition: background .2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { background: var(--primary-light); border-color: var(--primary); }
+
+    /* ── File Items (thumbnail + drag) ───────────────────────────────────── */
+    .file-item {
+      display: flex; align-items: center; gap: .5rem;
+      background: var(--surface2); border-radius: 8px;
+      padding: .4rem .6rem; font-size: .78rem; margin-top: .35rem;
+      cursor: grab; border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .file-item:active { cursor: grabbing; }
+    .file-item.sortable-ghost { opacity: .4; }
+    .file-thumb {
+      width: 40px; height: 32px; object-fit: cover;
+      border-radius: 4px; flex-shrink: 0;
+    }
+    .file-thumb-pdf {
+      width: 40px; height: 32px; background: #fee2e2; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; color: #dc2626; font-weight: 700; flex-shrink: 0;
+    }
+    .drag-handle    { color: var(--text-muted); cursor: grab; font-size: .8rem; }
+    .file-name      { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .remove-btn     { background: none; border: none; color: #ef4444; cursor: pointer; font-size: .85rem; flex-shrink: 0; }
+
+    /* ── Merge Button ────────────────────────────────────────────────────── */
+    .btn-merge {
+      background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      padding: .7rem 2.2rem; font-size: .95rem; font-weight: 600; transition: background .2s;
+    }
+    .btn-merge:hover    { filter: brightness(1.1); color: #fff; }
+    .btn-merge:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    .modal-content { background: var(--surface); color: var(--text); border-color: var(--border); }
+    .modal-header  { border-color: var(--border); }
+    .modal-footer  { border-color: var(--border); }
+    .confirm-item  {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .5rem .75rem; border-radius: 8px; background: var(--surface2);
+      margin-bottom: .4rem; font-size: .83rem; color: var(--text);
+    }
+    .confirm-section-label {
+      font-size: .7rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; margin: .6rem 0 .25rem;
+    }
+    .form-control, .input-group-text {
+      background: var(--surface2); color: var(--text); border-color: var(--border);
+    }
+    .form-control:focus { background: var(--surface2); color: var(--text); border-color: var(--primary); box-shadow: none; }
+    .btn-secondary-themed {
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: .45rem 1rem; cursor: pointer;
+    }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
     #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; }
     .toast-msg {
       background: #1e293b; color: #fff; padding: .7rem 1.1rem;
       border-radius: 10px; font-size: .82rem; margin-top: .4rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,.15); animation: fadeIn .3s;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: fadeIn .25s;
     }
     .toast-msg.error { background: #dc2626; }
     @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
@@ -113,19 +158,23 @@
 </head>
 <body>
 
-<nav class="navbar navbar-light bg-white border-bottom px-4 py-3">
-  <span class="navbar-brand fw-bold">📋 연구비 처리 시스템</span>
+<!-- Navbar -->
+<nav class="navbar px-4 py-2">
+  <div class="d-flex align-items-center gap-3">
+    <img src="/static/pnu_logo.jpg" alt="부산대학교" style="height:44px; object-fit:contain;">
+    <span class="nav-title">연구비 처리 시스템</span>
+  </div>
+  <button class="dark-toggle" onclick="toggleDark()">🌙 다크모드</button>
 </nav>
 
 <div class="container py-5" style="max-width:960px;">
 
-  <!-- Step 1: 비용 유형 선택 -->
+  <!-- Step 1 -->
   <div class="mb-5">
     <div class="d-flex align-items-center mb-3">
       <span class="step-badge">1</span>
       <span class="fw-semibold">비용 유형 선택</span>
     </div>
-
     {% for cat_name, cat_info in categories.items() %}
     <div class="mb-4">
       <div class="category-header">{{ cat_info.icon }} {{ cat_name }}</div>
@@ -146,24 +195,23 @@
     {% endfor %}
   </div>
 
-  <!-- Step 2: 파일 업로드 -->
+  <!-- Step 2 -->
   <div id="upload-section" class="mb-5">
     <div class="d-flex align-items-center mb-3">
       <span class="step-badge">2</span>
       <span class="fw-semibold">파일 업로드</span>
-      <span class="ms-2 text-muted" id="type-name-label" style="font-size:.83rem;"></span>
+      <span class="ms-2" id="type-name-label" style="font-size:.83rem; color:var(--text-muted);"></span>
     </div>
     <div id="doc-list" class="row g-3"></div>
   </div>
 
-  <!-- Step 3: 병합 -->
+  <!-- Step 3 -->
   <div id="merge-section" style="display:none;">
     <div class="d-flex align-items-center mb-3">
       <span class="step-badge">3</span>
       <span class="fw-semibold">PDF 병합</span>
     </div>
-    <button class="btn btn-merge" id="merge-btn" onclick="doMerge()">📄 PDF 병합하기</button>
-    <div id="merge-loading" class="mt-3 text-muted" style="display:none; font-size:.88rem;">⏳ 병합 중...</div>
+    <button class="btn btn-merge" onclick="openConfirm()">📄 병합 전 확인하기</button>
   </div>
 
 </div>
@@ -176,7 +224,34 @@
         <h5 class="modal-title" id="descModalTitle"></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body" id="descModalBody" style="font-size:.88rem; line-height:1.7;"></div>
+      <div class="modal-body" id="descModalBody" style="font-size:.88rem; line-height:1.75;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📋 병합 전 최종 확인</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.85rem; color:var(--text-muted);">아래 순서로 PDF가 병합됩니다.</p>
+        <div id="confirm-file-list"></div>
+        <hr style="border-color:var(--border);">
+        <label class="form-label fw-semibold" style="font-size:.88rem;">저장 파일명</label>
+        <div class="input-group input-group-sm">
+          <input type="text" id="custom-filename" class="form-control">
+          <span class="input-group-text">.pdf</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary-themed" data-bs-dismiss="modal">취소</button>
+        <button class="btn btn-merge ms-2" id="merge-btn" onclick="doMerge()">✅ 병합하기</button>
+        <div id="merge-loading" style="display:none; font-size:.85rem; color:var(--text-muted); margin-left:.75rem;">⏳ 병합 중...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -187,24 +262,24 @@
 <script>
   const DESCRIPTIONS = {{ descriptions | tojson | safe }};
   const TYPE_NAMES = {
-    {% for cat_name, cat_info in categories.items() %}
-    {% for key, info in cat_info.types.items() %}
-    '{{ key }}': '{{ info.name }}',
+    {% for cat_name, cat_info in categories.items() %}{% for key, info in cat_info.types.items() %}'{{ key }}': '{{ info.name }}',
     {% endfor %}{% endfor %}
   };
 
-  function showDesc(e, typeKey) {
-    e.stopPropagation();
-    document.getElementById('descModalTitle').textContent = TYPE_NAMES[typeKey] || typeKey;
-    document.getElementById('descModalBody').innerHTML = DESCRIPTIONS[typeKey] || '';
-    new bootstrap.Modal(document.getElementById('descModal')).show();
-  }
-
   let selectedType = null;
   let selectedDocs = [];
-  const fileStore  = {};
+  const fileStore  = {};   // docId → File[]
+  const sortables  = {};   // docId → Sortable instance
 
-  // ── Type selection ──────────────────────────────────────────────────────────
+  // ── Dark mode ─────────────────────────────────────────────────────────────
+  function toggleDark() {
+    const html = document.documentElement;
+    const isDark = html.dataset.theme === 'dark';
+    html.dataset.theme = isDark ? 'light' : 'dark';
+    document.querySelector('.dark-toggle').textContent = isDark ? '🌙 다크모드' : '☀️ 라이트모드';
+  }
+
+  // ── Type selection ─────────────────────────────────────────────────────────
   document.querySelectorAll('.type-card').forEach(card => {
     card.addEventListener('click', () => {
       document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
@@ -213,17 +288,17 @@
       selectedDocs = JSON.parse(card.dataset.docs);
       Object.keys(fileStore).forEach(k => delete fileStore[k]);
       renderDocs();
-      // Scroll to upload section
-      document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => document.getElementById('upload-section').scrollIntoView({ behavior:'smooth', block:'start' }), 50);
     });
   });
 
-  // ── Render upload cards ─────────────────────────────────────────────────────
+  // ── Render upload cards ────────────────────────────────────────────────────
   function renderDocs() {
     document.getElementById('upload-section').style.display = 'block';
     document.getElementById('merge-section').style.display  = 'block';
     document.getElementById('type-name-label').textContent  =
       '— ' + document.querySelector('.type-card.selected .label').textContent;
+
     const list = document.getElementById('doc-list');
     list.innerHTML = '';
 
@@ -242,7 +317,7 @@
           </div>
           <input type="file" id="input-${doc.id}" multiple accept="${doc.accept}" style="display:none"
                  onchange="handleFiles('${doc.id}', this.files)">
-          <div id="files-${doc.id}"></div>
+          <div id="files-${doc.id}" class="mt-1"></div>
         </div>`;
       list.appendChild(col);
 
@@ -256,23 +331,10 @@
     });
   }
 
+  // ── Handle file input ──────────────────────────────────────────────────────
   function handleFiles(docId, files) {
     Array.from(files).forEach(f => fileStore[docId].push(f));
     refreshFileList(docId);
-  }
-
-  function refreshFileList(docId) {
-    const container = document.getElementById(`files-${docId}`);
-    const card      = document.getElementById(`card-${docId}`);
-    container.innerHTML = '';
-    fileStore[docId].forEach((f, i) => {
-      const item = document.createElement('div');
-      item.className = 'file-item';
-      item.innerHTML = `<span>📄 ${f.name}</span>
-        <button class="remove-btn" onclick="removeFile('${docId}',${i})">✕</button>`;
-      container.appendChild(item);
-    });
-    card.classList.toggle('has-file', fileStore[docId].length > 0);
   }
 
   function removeFile(docId, idx) {
@@ -280,37 +342,147 @@
     refreshFileList(docId);
   }
 
-  // ── Merge ───────────────────────────────────────────────────────────────────
-  async function doMerge() {
+  function refreshFileList(docId) {
+    const container = document.getElementById(`files-${docId}`);
+    const card      = document.getElementById(`card-${docId}`);
+    container.innerHTML = '';
+
+    fileStore[docId].forEach((f, i) => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.dataset.idx = i;
+
+      const isImage = f.type.startsWith('image/');
+      const isPdf   = f.name.toLowerCase().endsWith('.pdf');
+
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = item.querySelector('.file-thumb');
+          if (img) img.src = e.target.result;
+        };
+        reader.readAsDataURL(f);
+        item.innerHTML = `
+          <span class="drag-handle">⠿</span>
+          <img class="file-thumb" src="" alt="">
+          <span class="file-name">${f.name}</span>
+          <button class="remove-btn" onclick="removeFile('${docId}',${i})">✕</button>`;
+      } else if (isPdf) {
+        item.innerHTML = `
+          <span class="drag-handle">⠿</span>
+          <div class="file-thumb-pdf">PDF</div>
+          <span class="file-name">${f.name}</span>
+          <button class="remove-btn" onclick="removeFile('${docId}',${i})">✕</button>`;
+      } else {
+        item.innerHTML = `
+          <span class="drag-handle">⠿</span>
+          <span style="font-size:1.2rem;">📄</span>
+          <span class="file-name">${f.name}</span>
+          <button class="remove-btn" onclick="removeFile('${docId}',${i})">✕</button>`;
+      }
+
+      container.appendChild(item);
+    });
+
+    // Re-init Sortable
+    if (sortables[docId]) sortables[docId].destroy();
+    if (fileStore[docId].length > 1) {
+      sortables[docId] = Sortable.create(container, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd(evt) {
+          const arr = fileStore[docId];
+          const moved = arr.splice(evt.oldIndex, 1)[0];
+          arr.splice(evt.newIndex, 0, moved);
+        }
+      });
+    }
+
+    card.classList.toggle('has-file', fileStore[docId].length > 0);
+  }
+
+  // ── Confirmation modal ─────────────────────────────────────────────────────
+  function openConfirm() {
     if (!selectedType) return toast('비용 유형을 선택해주세요.', true);
+
     for (const doc of selectedDocs) {
       if (doc.required && (!fileStore[doc.id] || fileStore[doc.id].length === 0))
         return toast(`'${doc.name}' 파일이 필요합니다.`, true);
     }
+
+    const listEl = document.getElementById('confirm-file-list');
+    listEl.innerHTML = '';
+    let totalFiles = 0;
+
+    selectedDocs.forEach(doc => {
+      const files = fileStore[doc.id] || [];
+      if (!files.length) return;
+      totalFiles += files.length;
+
+      const label = document.createElement('div');
+      label.className = 'confirm-section-label';
+      label.textContent = doc.name;
+      listEl.appendChild(label);
+
+      files.forEach((f, i) => {
+        const item = document.createElement('div');
+        item.className = 'confirm-item';
+        const isImage = f.type.startsWith('image/');
+        const isPdf   = f.name.toLowerCase().endsWith('.pdf');
+        let thumb = '';
+        if (isPdf) thumb = '<div class="file-thumb-pdf" style="width:28px;height:22px;font-size:.6rem;">PDF</div>';
+        else if (isImage) {
+          const url = URL.createObjectURL(f);
+          thumb = `<img src="${url}" style="width:28px;height:22px;object-fit:cover;border-radius:3px;">`;
+        }
+        item.innerHTML = `${thumb}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>`;
+        listEl.appendChild(item);
+      });
+    });
+
+    if (totalFiles === 0) return toast('파일을 하나 이상 업로드해주세요.', true);
+
+    const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    document.getElementById('custom-filename').value = `${TYPE_NAMES[selectedType]}_${date}`;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+  }
+
+  // ── Merge ──────────────────────────────────────────────────────────────────
+  async function doMerge() {
     const form = new FormData();
     form.append('expense_type', selectedType);
     selectedDocs.forEach(doc => (fileStore[doc.id] || []).forEach(f => form.append(doc.id, f)));
 
-    const btn = document.getElementById('merge-btn');
+    const btn     = document.getElementById('merge-btn');
     const loading = document.getElementById('merge-loading');
-    btn.disabled = true; loading.style.display = 'block';
+    btn.disabled = true; loading.style.display = 'inline-block';
 
     try {
       const res = await fetch('/merge', { method: 'POST', body: form });
       if (!res.ok) { toast((await res.json()).error || '오류가 발생했습니다.', true); return; }
-      const blob = await res.blob();
-      const disposition = res.headers.get('Content-Disposition') || '';
-      const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"'\n]+)/i);
-      const filename = match ? decodeURIComponent(match[1]) : 'merged.pdf';
+
+      const blob      = await res.blob();
+      const filename  = (document.getElementById('custom-filename').value.trim() || TYPE_NAMES[selectedType]) + '.pdf';
       const url = URL.createObjectURL(blob);
       Object.assign(document.createElement('a'), { href: url, download: filename }).click();
       URL.revokeObjectURL(url);
+
+      bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
       toast('✅ PDF 병합 완료! 다운로드를 확인하세요.');
     } catch { toast('네트워크 오류가 발생했습니다.', true); }
     finally { btn.disabled = false; loading.style.display = 'none'; }
   }
 
-  // ── Toast ───────────────────────────────────────────────────────────────────
+  // ── Description modal ──────────────────────────────────────────────────────
+  function showDesc(e, typeKey) {
+    e.stopPropagation();
+    document.getElementById('descModalTitle').textContent = TYPE_NAMES[typeKey] || typeKey;
+    document.getElementById('descModalBody').innerHTML    = DESCRIPTIONS[typeKey] || '';
+    new bootstrap.Modal(document.getElementById('descModal')).show();
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
   function toast(msg, isError = false) {
     const el = document.createElement('div');
     el.className = 'toast-msg' + (isError ? ' error' : '');
