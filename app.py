@@ -61,7 +61,8 @@ BUDGET_CATEGORIES = [
     ('paper_fee',         '연구활동비 - 논문 게재료'),
     ('education',         '연구활동비 - 교육훈련비'),
     ('settlement_fee',    '연구활동비 - 정산수수료'),
-    ('other_activity',    '연구활동비 - 기타'),
+    ('lab_operation',     '연구활동비 - 연구실운영비'),
+    ('other_activity',    '연구활동비 - 그밖의비용'),
     ('research_allowance','연구수당'),
     ('indirect',          '간접비'),
 ]
