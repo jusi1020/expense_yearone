@@ -1,12 +1,43 @@
-from flask import Flask, render_template, request, send_file, send_from_directory, jsonify
+from flask import Flask, render_template, request, send_file, send_from_directory, jsonify, session, redirect, url_for
 from pypdf import PdfWriter, PdfReader
 from PIL import Image
 from datetime import datetime
+from functools import wraps
+from supabase import create_client
+from dotenv import load_dotenv
 import io
 import os
 
+load_dotenv()
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-change-this')
+
+supabase = create_client(
+    os.getenv('SUPABASE_URL'),
+    os.getenv('SUPABASE_SERVICE_KEY')
+)
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'access_token' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def get_current_user():
+    token = session.get('access_token')
+    if not token:
+        return None
+    try:
+        res = supabase.auth.get_user(token)
+        return res.user
+    except Exception:
+        session.clear()
+        return None
 
 BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
 
@@ -726,20 +757,54 @@ def merge_files(files_dict, doc_order):
 
 
 @app.route('/')
+@login_required
 def index():
+    user = get_current_user()
     return render_template('index.html',
                            categories=get_categories(),
                            descriptions=DESCRIPTIONS,
                            byeolji_all=get_byeolji_all(),
-                           byeolji_map=BYEOLJI_MAP)
+                           byeolji_map=BYEOLJI_MAP,
+                           user=user)
 
 
 @app.route('/byeolji/<path:filename>')
+@login_required
 def download_byeolji(filename):
     return send_from_directory(BYEOLJI_DIR, filename, as_attachment=True)
 
 
+# ── Auth Routes ───────────────────────────────────────────────────────────────
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'access_token' in session:
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        email    = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        try:
+            res = supabase.auth.sign_in_with_password({'email': email, 'password': password})
+            session['access_token'] = res.session.access_token
+            session['user_id']      = res.user.id
+            return redirect(url_for('index'))
+        except Exception:
+            error = '이메일 또는 비밀번호가 올바르지 않습니다.'
+    return render_template('login.html', error=error)
+
+
+@app.route('/logout')
+def logout():
+    try:
+        supabase.auth.sign_out()
+    except Exception:
+        pass
+    session.clear()
+    return redirect(url_for('login'))
+
+
 @app.route('/merge', methods=['POST'])
+@login_required
 def merge():
     expense_type = request.form.get('expense_type')
 
