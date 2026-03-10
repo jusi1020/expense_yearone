@@ -240,7 +240,8 @@
                 onclick="event.stopPropagation();toggleBreakdown('{{ p.id }}')">📊 세목</button>
         {% endif %}
         <button type="button" class="del-project-btn" title="수정"
-                onclick="event.stopPropagation();openEditProject({{ p | tojson }})">✏️</button>
+                data-project='{{ p | tojson }}'
+                onclick="event.stopPropagation();openEditProject(this)">✏️</button>
         <form method="POST" action="/manage/projects/{{ p.id }}/delete" onsubmit="event.stopPropagation();return confirm('과제를 삭제할까요?')">
           <button type="submit" class="del-project-btn" onclick="event.stopPropagation()">🗑</button>
         </form>
@@ -316,7 +317,9 @@
           <span class="expense-type-tag">{{ e.expense_type or '기타' }}</span>
           <span class="expense-desc">{{ e.description or '-' }}</span>
           <span class="expense-amount">{{ "{:,}".format(e.amount) }}원</span>
-          <button class="expense-del" title="수정" onclick="openEditExpense({{ e | tojson }})">✏️</button>
+          <button class="expense-del" title="수정"
+                  data-expense='{{ e | tojson }}'
+                  onclick="openEditExpense(this)">✏️</button>
           <form method="POST" action="/manage/expenses/{{ e.id }}/delete" style="margin:0">
             <button type="submit" class="expense-del" onclick="return confirm('삭제할까요?')">✕</button>
           </form>
@@ -609,7 +612,8 @@
   }
 
   // 과제 수정 모달 열기
-  function openEditProject(p) {
+  function openEditProject(btn) {
+    const p = JSON.parse(btn.dataset.project);
     document.getElementById('ep-name').value  = p.name || '';
     document.getElementById('ep-pi').value    = p.pi_name || '';
     document.getElementById('ep-start').value = p.start_date || '';
@@ -634,11 +638,12 @@
   }
 
   // 지출 수정 모달 열기
-  function openEditExpense(e) {
-    document.getElementById('ee-amount').value  = e.amount || '';
-    document.getElementById('ee-desc').value    = e.description || '';
-    document.getElementById('ee-date').value    = e.expense_date || '';
-    document.getElementById('ee-type').value    = e.expense_type || '';
+  function openEditExpense(btn) {
+    const e = JSON.parse(btn.dataset.expense);
+    document.getElementById('ee-amount').value     = e.amount || '';
+    document.getElementById('ee-desc').value       = e.description || '';
+    document.getElementById('ee-date').value       = e.expense_date || '';
+    document.getElementById('ee-type').value       = e.expense_type || '';
     document.getElementById('ee-budget-cat').value = e.budget_category || '';
     document.getElementById('edit-expense-form').action = `/manage/expenses/${e.id}/edit`;
     new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
