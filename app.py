@@ -889,9 +889,25 @@ def manage():
     except Exception:
         projects, lab, role = [], None, 'member'
 
+    # 세목별 합계 계산
+    cat_summary = {key: {'label': label, 'budgeted': 0, 'spent': 0} for key, label in BUDGET_CATEGORIES}
+    for p in projects:
+        breakdown = p.get('budget_breakdown') or {}
+        for key in cat_summary:
+            cat_summary[key]['budgeted'] += breakdown.get(key, 0)
+        for e in p.get('expenses', []):
+            cat = e.get('budget_category', '')
+            if cat and cat in cat_summary:
+                cat_summary[cat]['spent'] += e['amount']
+    for v in cat_summary.values():
+        v['remaining'] = v['budgeted'] - v['spent']
+    # 예산 설정된 세목만 필터링
+    cat_summary_filtered = {k: v for k, v in cat_summary.items() if v['budgeted'] > 0}
+
     return render_template('manage.html', user=user, projects=projects,
                            lab=lab, role=role, expense_types=EXPENSE_TYPES,
-                           budget_categories=BUDGET_CATEGORIES)
+                           budget_categories=BUDGET_CATEGORIES,
+                           cat_summary=cat_summary_filtered)
 
 
 @app.route('/manage/labs/create', methods=['POST'])

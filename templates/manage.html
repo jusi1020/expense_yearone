@@ -264,6 +264,47 @@
   </div>
   {% endif %}
 
+  <!-- ── 세목별 현황 ── -->
+  {% if cat_summary %}
+  <div class="mb-4">
+    <div class="sec-title">🗂 세목별 현황 (전체 과제 합산)</div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.25rem;">
+      {% set total_cat_budget  = cat_summary.values() | sum(attribute='budgeted') %}
+      {% set total_cat_spent   = cat_summary.values() | sum(attribute='spent') %}
+      {% for key, v in cat_summary.items() %}
+      {% set pct  = [((v.spent / v.budgeted * 100)|int if v.budgeted else 0), 100]|min %}
+      {% set over = v.spent > v.budgeted %}
+      <div class="breakdown-row">
+        <div class="breakdown-labels">
+          <span class="breakdown-cat">{{ v.label }}</span>
+          <span class="breakdown-nums">
+            <span style="color:{% if over %}var(--danger){% else %}var(--primary){% endif %}; font-weight:600;">{{ "{:,}".format(v.spent) }}</span>
+            &nbsp;/&nbsp;{{ "{:,}".format(v.budgeted) }}원
+            &nbsp;
+            <span style="color:{% if over %}var(--danger){% else %}var(--success){% endif %}; font-weight:700;">(잔{{ "{:,}".format(v.remaining) }})</span>
+          </span>
+        </div>
+        <div class="breakdown-bar-bg">
+          <div class="breakdown-bar-fill"
+               style="width:{{ pct }}%; background:{% if over %}var(--danger){% elif pct > 80 %}#f59e0b{% else %}var(--success){% endif %};"></div>
+        </div>
+      </div>
+      {% endfor %}
+      <div class="breakdown-total-row">
+        <span>전체 합계</span>
+        <span>
+          <span style="color:var(--primary);">{{ "{:,}".format(total_cat_spent) }}</span>
+          &nbsp;/&nbsp;{{ "{:,}".format(total_cat_budget) }}원
+          &nbsp;
+          <span style="color:{% if total_cat_spent > total_cat_budget %}var(--danger){% else %}var(--success){% endif %}; font-weight:700;">
+            (잔{{ "{:,}".format(total_cat_budget - total_cat_spent) }})
+          </span>
+        </span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── 과제 목록 ── -->
   <div class="sec-title">📁 과제 목록</div>
 
