@@ -9,6 +9,7 @@ import io
 import os
 import random
 import string
+import resend as resend_client
 
 load_dotenv()
 
@@ -43,6 +44,31 @@ def get_current_user():
 
 def generate_invite_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+resend_client.api_key = os.getenv('RESEND_API_KEY', '')
+
+def generate_otp():
+    return str(random.randint(100000, 999999))
+
+def send_otp_email(email: str, otp: str):
+    resend_client.Emails.send({
+        'from':    os.getenv('FROM_EMAIL', 'noreply@yearone.co.kr'),
+        'to':      [email],
+        'subject': '[연구비 처리 시스템] 이메일 인증코드',
+        'html': f"""
+        <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:2rem;">
+          <h2 style="margin-bottom:.5rem;color:#1e293b;">이메일 인증</h2>
+          <p style="color:#64748b;margin-bottom:1.5rem;">아래 6자리 인증코드를 입력해주세요.<br>코드는 10분간 유효합니다.</p>
+          <div style="font-size:2.2rem;font-weight:800;letter-spacing:.5rem;color:#4f46e5;
+                      background:#eef2ff;border-radius:12px;padding:1.25rem;text-align:center;">
+            {otp}
+          </div>
+          <p style="color:#94a3b8;font-size:.8rem;margin-top:1.5rem;">
+            본인이 요청하지 않은 경우 이 이메일을 무시해주세요.
+          </p>
+        </div>
+        """,
+    })
 
 # 세목별 예산 카테고리
 BUDGET_CATEGORIES = [
@@ -1113,12 +1139,16 @@ def register():
                 if dup.data:
                     error = '이미 사용 중인 아이디입니다.'
                 else:
-                    supabase.auth.sign_up({
-                        'email':    email,
-                        'password': password,
-                        'options':  {'data': {'username': username, 'student_id': student_id}}
-                    })
+                    otp = generate_otp()
+                    # OTP를 DB에 저장 (upsert)
+                    supabase.table('otp_codes').upsert({
+                        'email': email, 'code': otp,
+                    }).execute()
+                    # Resend로 이메일 발송
+                    send_otp_email(email, otp)
+                    # 세션에 가입 정보 보관
                     session['reg_email']      = email
+                    session['reg_password']   = password
                     session['reg_username']   = username
                     session['reg_student_id'] = student_id
                     return redirect(url_for('verify_otp'))
@@ -1137,20 +1167,43 @@ def verify_otp():
         otp   = request.form.get('otp', '').strip()
         email = session.get('reg_email')
         try:
-            res = supabase.auth.verify_otp({'email': email, 'token': otp, 'type': 'email'})
-            if res.user:
-                supabase.table('profiles').upsert({
-                    'id':         res.user.id,
-                    'username':   session.get('reg_username'),
-                    'student_id': session.get('reg_student_id'),
-                }).execute()
-            for k in ['reg_email', 'reg_username', 'reg_student_id']:
-                session.pop(k, None)
-            session['access_token'] = res.session.access_token
-            session['user_id']      = res.user.id
-            return redirect(url_for('manage'))
-        except Exception:
-            error = '인증코드가 올바르지 않거나 만료됐습니다.'
+            # DB에서 OTP 확인
+            row = supabase.table('otp_codes').select('*').eq('email', email).single().execute()
+            if not row.data:
+                error = '인증코드를 먼저 요청해주세요.'
+            elif row.data['code'] != otp:
+                error = '인증코드가 올바르지 않습니다.'
+            else:
+                from datetime import timezone
+                expires = datetime.fromisoformat(row.data['expires_at'].replace('Z', '+00:00'))
+                if datetime.now(timezone.utc) > expires:
+                    error = '인증코드가 만료됐습니다. 다시 가입해주세요.'
+                else:
+                    # Supabase 유저 생성 (이메일 인증 생략)
+                    new_user = supabase.auth.admin.create_user({
+                        'email':          email,
+                        'password':       session.get('reg_password'),
+                        'email_confirm':  True,
+                    })
+                    supabase.table('profiles').upsert({
+                        'id':         new_user.user.id,
+                        'username':   session.get('reg_username'),
+                        'student_id': session.get('reg_student_id'),
+                    }).execute()
+                    # OTP 삭제
+                    supabase.table('otp_codes').delete().eq('email', email).execute()
+                    # 자동 로그인
+                    res = supabase.auth.sign_in_with_password({
+                        'email': email, 'password': session.get('reg_password')
+                    })
+                    for k in ['reg_email', 'reg_password', 'reg_username', 'reg_student_id']:
+                        session.pop(k, None)
+                    session['access_token'] = res.session.access_token
+                    session['user_id']      = res.user.id
+                    return redirect(url_for('manage'))
+        except Exception as e:
+            if not error:
+                error = f'오류가 발생했습니다: {str(e)}'
     return render_template('verify_otp.html', email=session.get('reg_email'), error=error)
 
 
