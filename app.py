@@ -955,6 +955,30 @@ def create_project():
     return redirect(url_for('manage'))
 
 
+@app.route('/manage/projects/<project_id>/edit', methods=['POST'])
+@login_required
+def edit_project(project_id):
+    try:
+        breakdown = {}
+        total = 0
+        for key, _ in BUDGET_CATEGORIES:
+            val = request.form.get(f'budget_{key}', '')
+            if val:
+                breakdown[key] = int(val)
+                total += int(val)
+        supabase.table('projects').update({
+            'name':             request.form.get('name'),
+            'pi_name':          request.form.get('pi_name'),
+            'budget':           total if total > 0 else (int(request.form.get('budget')) if request.form.get('budget') else None),
+            'budget_breakdown': breakdown if breakdown else None,
+            'start_date':       request.form.get('start_date') or None,
+            'end_date':         request.form.get('end_date') or None,
+        }).eq('id', project_id).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
+
+
 @app.route('/manage/projects/<project_id>/delete', methods=['POST'])
 @login_required
 def delete_project(project_id):
@@ -979,6 +1003,22 @@ def create_expense():
             'budget_category': request.form.get('budget_category', ''),
             'expense_date':    request.form.get('expense_date') or None,
         }).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
+
+
+@app.route('/manage/expenses/<expense_id>/edit', methods=['POST'])
+@login_required
+def edit_expense(expense_id):
+    try:
+        supabase.table('expenses').update({
+            'amount':          int(request.form.get('amount', 0)),
+            'description':     request.form.get('description', ''),
+            'expense_type':    request.form.get('expense_type', ''),
+            'budget_category': request.form.get('budget_category', ''),
+            'expense_date':    request.form.get('expense_date') or None,
+        }).eq('id', expense_id).execute()
     except Exception:
         pass
     return redirect(url_for('manage'))
