@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>이메일 인증 — 연구비 처리 시스템</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8fafc; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .box {
+      background: #fff; border-radius: 16px; padding: 2.5rem 2rem;
+      width: 100%; max-width: 400px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      text-align: center;
+    }
+    .logo-area img { height: 44px; object-fit: contain; margin-bottom: .75rem; }
+    .email-badge {
+      background: #eef2ff; color: #4f46e5; border-radius: 20px;
+      padding: .35rem 1rem; font-size: .83rem; font-weight: 600;
+      display: inline-block; margin: 1rem 0;
+    }
+    .desc { font-size: .87rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6; }
+
+    /* OTP 입력 칸 */
+    .otp-inputs { display: flex; gap: .5rem; justify-content: center; margin-bottom: 1.5rem; }
+    .otp-inputs input {
+      width: 46px; height: 54px; text-align: center; font-size: 1.4rem; font-weight: 700;
+      border: 2px solid #e2e8f0; border-radius: 10px; color: #1e293b;
+      outline: none; transition: border-color .15s;
+    }
+    .otp-inputs input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+    .otp-inputs input.filled { border-color: #4f46e5; background: #eef2ff; }
+
+    .btn-submit {
+      background: #4f46e5; color: #fff; border: none; border-radius: 10px;
+      padding: .65rem; font-size: .93rem; font-weight: 600; width: 100%;
+    }
+    .btn-submit:hover { filter: brightness(1.1); color: #fff; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error-box {
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+      padding: .6rem .85rem; font-size: .83rem; color: #dc2626; margin-bottom: 1rem;
+      text-align: left;
+    }
+    .resend-area { margin-top: 1.25rem; font-size: .82rem; color: #94a3b8; }
+    .resend-area a { color: #4f46e5; text-decoration: none; font-weight: 600; cursor: pointer; }
+    #timer { font-weight: 600; color: #4f46e5; }
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo-area">
+    <img src="/static/pnu_logo.jpg" alt="부산대학교">
+  </div>
+
+  <h5 style="font-weight:700; font-size:1rem; margin-bottom:.25rem;">이메일 인증</h5>
+  <div class="email-badge">📧 {{ email }}</div>
+  <p class="desc">위 이메일로 발송된 6자리 인증코드를 입력해주세요.<br>코드는 10분간 유효합니다.</p>
+
+  {% if error %}
+  <div class="error-box">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" id="otp-form">
+    <input type="hidden" name="otp" id="otp-hidden">
+    <div class="otp-inputs">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d0">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d1">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d2">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d3">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d4">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="d5">
+    </div>
+    <button type="submit" class="btn-submit" id="submit-btn" disabled>인증하기</button>
+  </form>
+
+  <div class="resend-area">
+    코드를 못 받으셨나요? <span id="timer">5:00</span> 후 재발송 가능
+  </div>
+</div>
+
+<script>
+  const digits = document.querySelectorAll('.otp-digit');
+  const hidden = document.getElementById('otp-hidden');
+  const btn    = document.getElementById('submit-btn');
+
+  digits.forEach((el, i) => {
+    el.addEventListener('input', e => {
+      const v = e.target.value.replace(/\D/g, '');
+      e.target.value = v;
+      e.target.classList.toggle('filled', v !== '');
+      if (v && i < 5) digits[i + 1].focus();
+      updateHidden();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) digits[i - 1].focus();
+    });
+    el.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      [...text].forEach((c, j) => { if (digits[j]) { digits[j].value = c; digits[j].classList.add('filled'); } });
+      if (digits[text.length - 1]) digits[text.length - 1].focus();
+      updateHidden();
+    });
+  });
+
+  function updateHidden() {
+    const code = [...digits].map(d => d.value).join('');
+    hidden.value = code;
+    btn.disabled = code.length < 6;
+  }
+
+  // 타이머
+  let seconds = 300;
+  const timerEl = document.getElementById('timer');
+  const iv = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(iv);
+      timerEl.parentElement.innerHTML = '코드가 만료됐어요. <a href="/register">다시 가입</a>하거나 재발송해주세요.';
+    } else {
+      const m = Math.floor(seconds / 60), s = seconds % 60;
+      timerEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    }
+  }, 1000);
+
+  document.getElementById('d0').focus();
+</script>
+</body>
+</html>

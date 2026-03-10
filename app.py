@@ -851,6 +851,86 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if 'access_token' in session:
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        username   = request.form.get('username', '').strip()
+        email      = request.form.get('email', '').strip().lower()
+        password   = request.form.get('password', '')
+        password2  = request.form.get('password2', '')
+        student_id = request.form.get('student_id', '').strip()
+
+        if not email.endswith('@pusan.ac.kr'):
+            error = '부산대학교 이메일(@pusan.ac.kr)만 사용 가능합니다.'
+        elif not username or len(username) < 3:
+            error = '아이디는 3자 이상이어야 합니다.'
+        elif password != password2:
+            error = '비밀번호가 일치하지 않습니다.'
+        elif len(password) < 8:
+            error = '비밀번호는 8자 이상이어야 합니다.'
+        else:
+            try:
+                dup = supabase.table('profiles').select('id').eq('username', username).execute()
+                if dup.data:
+                    error = '이미 사용 중인 아이디입니다.'
+                else:
+                    supabase.auth.sign_up({
+                        'email':    email,
+                        'password': password,
+                        'options':  {'data': {'username': username, 'student_id': student_id}}
+                    })
+                    session['reg_email']      = email
+                    session['reg_username']   = username
+                    session['reg_student_id'] = student_id
+                    return redirect(url_for('verify_otp'))
+            except Exception as e:
+                error = f'오류가 발생했습니다: {str(e)}'
+
+    return render_template('register.html', error=error)
+
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    if 'reg_email' not in session:
+        return redirect(url_for('register'))
+    error = None
+    if request.method == 'POST':
+        otp   = request.form.get('otp', '').strip()
+        email = session.get('reg_email')
+        try:
+            res = supabase.auth.verify_otp({'email': email, 'token': otp, 'type': 'email'})
+            if res.user:
+                supabase.table('profiles').upsert({
+                    'id':         res.user.id,
+                    'username':   session.get('reg_username'),
+                    'student_id': session.get('reg_student_id'),
+                }).execute()
+            for k in ['reg_email', 'reg_username', 'reg_student_id']:
+                session.pop(k, None)
+            session['access_token'] = res.session.access_token
+            session['user_id']      = res.user.id
+            return redirect(url_for('manage'))
+        except Exception:
+            error = '인증코드가 올바르지 않거나 만료됐습니다.'
+    return render_template('verify_otp.html', email=session.get('reg_email'), error=error)
+
+
+@app.route('/api/check-username')
+def check_username():
+    username = request.args.get('q', '').strip()
+    if not username or len(username) < 3:
+        return jsonify({'available': False, 'message': '3자 이상 입력해주세요.'})
+    try:
+        res = supabase.table('profiles').select('id').eq('username', username).execute()
+        available = len(res.data) == 0
+        return jsonify({'available': available, 'message': '사용 가능한 아이디입니다.' if available else '이미 사용 중인 아이디입니다.'})
+    except Exception:
+        return jsonify({'available': False, 'message': '확인 중 오류가 발생했습니다.'})
+
+
 @app.route('/merge', methods=['POST'])
 def merge():
     expense_type = request.form.get('expense_type')
