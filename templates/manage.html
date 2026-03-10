@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>연구비 관리 시스템</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc; --surface: #ffffff; --surface2: #f1f5f9;
+      --text: #1e293b; --text-muted: #64748b; --border: #e5e7eb;
+      --primary: #4f46e5; --primary-light: #eef2ff;
+      --success: #10b981; --shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    [data-theme="dark"] {
+      --bg: #0f172a; --surface: #1e293b; --surface2: #293548;
+      --text: #f1f5f9; --text-muted: #94a3b8; --border: #334155;
+      --primary: #818cf8; --primary-light: #1e1b4b;
+      --success: #34d399; --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    body      { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; transition: background .25s, color .25s; }
+    .navbar   { background: var(--surface) !important; border-bottom: 1px solid var(--border); }
+    .nav-tab  { font-size:.83rem; font-weight:600; color:var(--text-muted); text-decoration:none; padding:.35rem .85rem; border-radius:8px; transition:all .15s; }
+    .nav-tab:hover  { background:var(--surface2); color:var(--text); }
+    .nav-tab.active { background:var(--primary-light); color:var(--primary); }
+    .nav-auth-btn { font-size:.82rem; color:var(--text-muted); text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:.3rem .75rem; background:var(--surface2); }
+    .dark-toggle  { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:.3rem .75rem; cursor:pointer; font-size:.82rem; color:var(--text); }
+
+    .card-surf { background: var(--surface); border-color: var(--border) !important; border-radius: 14px; }
+    .section-title { font-size:.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:1rem; }
+
+    .project-card {
+      background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 1.1rem 1.25rem; transition: border-color .15s;
+    }
+    .project-card:hover { border-color: var(--primary); }
+    .project-name  { font-weight: 700; font-size: .95rem; }
+    .project-meta  { font-size: .78rem; color: var(--text-muted); margin-top: .25rem; }
+    .budget-badge  {
+      background: var(--primary-light); color: var(--primary);
+      border-radius: 8px; padding: .2rem .65rem; font-size: .78rem; font-weight: 700;
+    }
+
+    .form-label   { font-size:.83rem; font-weight:600; color:var(--text); }
+    .form-control, .form-select {
+      background: var(--surface2); color: var(--text); border-color: var(--border);
+      border-radius: 8px; font-size: .87rem;
+    }
+    .form-control:focus, .form-select:focus {
+      background: var(--surface2); color: var(--text);
+      border-color: var(--primary); box-shadow: none;
+    }
+    .btn-primary-themed {
+      background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      padding: .55rem 1.5rem; font-size: .88rem; font-weight: 600;
+    }
+    .btn-primary-themed:hover { filter: brightness(1.1); color: #fff; }
+    .btn-danger-sm {
+      background: none; border: none; color: #ef4444; font-size: .8rem; cursor: pointer; padding: .2rem .5rem;
+    }
+    .btn-danger-sm:hover { background: #fef2f2; border-radius: 6px; }
+
+    .empty-state { text-align:center; color:var(--text-muted); padding: 3rem 1rem; font-size:.9rem; }
+
+    .no-lab-notice {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+      padding: 1.25rem 1.5rem; font-size: .87rem; color: #92400e;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar px-4 py-2">
+  <div class="d-flex align-items-center gap-3">
+    <img src="/static/pnu_logo.jpg" alt="부산대학교" style="height:44px; object-fit:contain;">
+    <div class="d-flex gap-1">
+      <a href="/" class="nav-tab">📄 처리 시스템</a>
+      <a href="/manage" class="nav-tab active">📊 관리 시스템</a>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button class="dark-toggle" onclick="toggleDark()">🌙 다크모드</button>
+    <span style="font-size:.8rem; color:var(--text-muted);">{{ user.email }}</span>
+    <a href="/logout" class="nav-auth-btn">로그아웃</a>
+  </div>
+</nav>
+
+<div class="container py-5" style="max-width:860px;">
+
+  {% if not lab %}
+  <div class="no-lab-notice mb-4">
+    ⚠️ 연구실 정보가 연결되어 있지 않아요. 관리자에게 연구실 배정을 요청해주세요.
+  </div>
+  {% else %}
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <div class="section-title">연구실</div>
+      <h4 class="fw-bold mb-0" style="font-size:1.15rem;">{{ lab.name }}</h4>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- 과제 목록 -->
+    <div class="col-12 col-lg-7">
+      <div class="section-title">📁 과제 목록</div>
+      {% if projects %}
+        {% for p in projects %}
+        <div class="project-card mb-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="project-name">{{ p.name }}</div>
+              <div class="project-meta">
+                {% if p.pi_name %}👩‍🔬 {{ p.pi_name }}{% endif %}
+                {% if p.start_date and p.end_date %} &nbsp;·&nbsp; 📅 {{ p.start_date }} ~ {{ p.end_date }}{% endif %}
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {% if p.budget %}
+              <span class="budget-badge">{{ "{:,}".format(p.budget) }}원</span>
+              {% endif %}
+              <form method="POST" action="/manage/projects/{{ p.id }}" onsubmit="return confirm('삭제할까요?')">
+                <button type="submit" class="btn-danger-sm">✕</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">📭 등록된 과제가 없어요</div>
+      {% endif %}
+    </div>
+
+    <!-- 과제 추가 폼 -->
+    <div class="col-12 col-lg-5">
+      <div class="card-surf p-4">
+        <div class="section-title">➕ 새 과제 등록</div>
+        {% if not lab %}
+        <p style="font-size:.83rem; color:var(--text-muted);">연구실 배정 후 과제를 등록할 수 있어요.</p>
+        {% else %}
+        <form method="POST" action="/manage/projects">
+          <div class="mb-3">
+            <label class="form-label">과제명 *</label>
+            <input type="text" name="name" class="form-control" placeholder="예: 2025년도 BK21 연구과제" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">담당 교수님</label>
+            <input type="text" name="pi_name" class="form-control" placeholder="예: 홍길동">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">총 예산 (원)</label>
+            <input type="number" name="budget" class="form-control" placeholder="예: 50000000">
+          </div>
+          <div class="row g-2 mb-4">
+            <div class="col">
+              <label class="form-label">시작일</label>
+              <input type="date" name="start_date" class="form-control">
+            </div>
+            <div class="col">
+              <label class="form-label">종료일</label>
+              <input type="date" name="end_date" class="form-control">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary-themed w-100">등록하기</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleDark() {
+    const html = document.documentElement;
+    const isDark = html.dataset.theme === 'dark';
+    html.dataset.theme = isDark ? 'light' : 'dark';
+    document.querySelector('.dark-toggle').textContent = isDark ? '🌙 다크모드' : '☀️ 라이트모드';
+  }
+</script>
+</body>
+</html>

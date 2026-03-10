@@ -40,6 +40,18 @@
     /* ── Navbar ──────────────────────────────────────────────────────────── */
     .navbar     { background: var(--surface) !important; border-bottom: 1px solid var(--border); }
     .nav-title  { font-weight: 700; color: var(--text-muted); font-size: .95rem; border-left: 2px solid var(--border); padding-left: 1rem; }
+    .nav-tab {
+      font-size: .83rem; font-weight: 600; color: var(--text-muted);
+      text-decoration: none; padding: .35rem .85rem; border-radius: 8px; transition: all .15s;
+    }
+    .nav-tab:hover  { background: var(--surface2); color: var(--text); }
+    .nav-tab.active { background: var(--primary-light); color: var(--primary); }
+    .nav-auth-btn {
+      font-size: .82rem; color: var(--text-muted); text-decoration: none;
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: .3rem .75rem; background: var(--surface2);
+    }
+    .nav-auth-btn:hover { border-color: var(--primary); color: var(--primary); }
     .dark-toggle {
       background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
       padding: .3rem .75rem; cursor: pointer; font-size: .82rem; color: var(--text); transition: all .2s;
@@ -171,11 +183,19 @@
 <nav class="navbar px-4 py-2">
   <div class="d-flex align-items-center gap-3">
     <img src="/static/pnu_logo.jpg" alt="부산대학교" style="height:44px; object-fit:contain;">
-    <span class="nav-title">연구비 처리 시스템</span>
+    <div class="d-flex gap-1">
+      <a href="/" class="nav-tab active">📄 처리 시스템</a>
+      <a href="/manage" class="nav-tab">📊 관리 시스템</a>
+    </div>
   </div>
   <div class="d-flex align-items-center gap-2">
     <button class="dark-toggle" onclick="toggleDark()">🌙 다크모드</button>
-    <a href="/logout" style="font-size:.82rem; color:var(--text-muted); text-decoration:none; border:1px solid var(--border); border-radius:20px; padding:.3rem .75rem; background:var(--surface2);">로그아웃</a>
+    {% if user %}
+    <span style="font-size:.8rem; color:var(--text-muted);">{{ user.email }}</span>
+    <a href="/logout" class="nav-auth-btn">로그아웃</a>
+    {% else %}
+    <a href="/login" class="nav-auth-btn">로그인</a>
+    {% endif %}
   </div>
 </nav>
 

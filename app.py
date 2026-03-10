@@ -757,7 +757,6 @@ def merge_files(files_dict, doc_order):
 
 
 @app.route('/')
-@login_required
 def index():
     user = get_current_user()
     return render_template('index.html',
@@ -769,9 +768,58 @@ def index():
 
 
 @app.route('/byeolji/<path:filename>')
-@login_required
 def download_byeolji(filename):
     return send_from_directory(BYEOLJI_DIR, filename, as_attachment=True)
+
+
+# ── 연구비 관리 시스템 ─────────────────────────────────────────────────────────
+@app.route('/manage')
+@login_required
+def manage():
+    user = get_current_user()
+    # 내 연구실 과제 목록 조회
+    try:
+        profile = supabase.table('profiles').select('*, labs(*)').eq('id', user.id).single().execute()
+        lab_id  = profile.data.get('lab_id')
+        projects = supabase.table('projects').select('*').eq('lab_id', lab_id).order('created_at', desc=True).execute().data if lab_id else []
+        lab     = profile.data.get('labs')
+    except Exception:
+        projects = []
+        lab      = None
+    return render_template('manage.html', user=user, projects=projects, lab=lab)
+
+
+@app.route('/manage/projects', methods=['POST'])
+@login_required
+def create_project():
+    user = get_current_user()
+    try:
+        profile = supabase.table('profiles').select('lab_id').eq('id', user.id).single().execute()
+        lab_id  = profile.data.get('lab_id')
+        if not lab_id:
+            return jsonify({'error': '연구실 정보가 없습니다.'}), 400
+        data = {
+            'lab_id':     lab_id,
+            'name':       request.form.get('name'),
+            'pi_name':    request.form.get('pi_name'),
+            'budget':     int(request.form.get('budget', 0)) if request.form.get('budget') else None,
+            'start_date': request.form.get('start_date') or None,
+            'end_date':   request.form.get('end_date') or None,
+        }
+        supabase.table('projects').insert(data).execute()
+        return redirect(url_for('manage'))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/manage/projects/<project_id>', methods=['POST'])
+@login_required
+def delete_project(project_id):
+    try:
+        supabase.table('projects').delete().eq('id', project_id).execute()
+    except Exception:
+        pass
+    return redirect(url_for('manage'))
 
 
 # ── Auth Routes ───────────────────────────────────────────────────────────────
@@ -804,7 +852,6 @@ def logout():
 
 
 @app.route('/merge', methods=['POST'])
-@login_required
 def merge():
     expense_type = request.form.get('expense_type')
 
