@@ -211,6 +211,59 @@
     {% endif %}
   </div>
 
+  <!-- ── 예산 현황 요약 ── -->
+  {% if projects %}
+  <div class="mb-4">
+    <div class="sec-title">📈 예산 현황 요약</div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+
+      {% set total_budget = projects | sum(attribute='budget') %}
+      {% set total_spent  = projects | sum(attribute='total_spent') %}
+
+      <!-- 헤더 -->
+      <div style="display:grid; grid-template-columns:1fr 120px 120px 120px; gap:.5rem; padding:.55rem 1.25rem; background:var(--surface2); font-size:.74rem; font-weight:700; color:var(--text-muted);">
+        <span>과제명</span>
+        <span style="text-align:right;">예산</span>
+        <span style="text-align:right;">지출</span>
+        <span style="text-align:right;">잔액</span>
+      </div>
+
+      {% for p in projects %}
+      {% set pct    = [((p.total_spent / p.budget * 100)|int if p.budget else 0), 100]|min %}
+      {% set over   = p.budget and p.total_spent > p.budget %}
+      {% set remain = (p.budget - p.total_spent) if p.budget else none %}
+      <div style="padding:.7rem 1.25rem; border-top:1px solid var(--border);">
+        <div style="display:grid; grid-template-columns:1fr 120px 120px 120px; gap:.5rem; align-items:center; margin-bottom:.4rem;">
+          <span style="font-size:.83rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.name }}</span>
+          <span style="font-size:.8rem; text-align:right; color:var(--text-muted);">{{ "{:,}".format(p.budget) if p.budget else '-' }}</span>
+          <span style="font-size:.8rem; text-align:right; color:var(--primary); font-weight:600;">{{ "{:,}".format(p.total_spent) }}</span>
+          <span style="font-size:.8rem; text-align:right; font-weight:700; color:{% if over %}var(--danger){% else %}var(--success){% endif %};">
+            {% if remain is not none %}{{ "{:,}".format(remain) }}{% else %}-{% endif %}
+          </span>
+        </div>
+        {% if p.budget %}
+        <div class="breakdown-bar-bg">
+          <div class="breakdown-bar-fill"
+               style="width:{{ pct }}%; background:{% if over %}var(--danger){% elif pct > 80 %}#f59e0b{% else %}var(--success){% endif %};"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <!-- 합계 행 -->
+      <div style="display:grid; grid-template-columns:1fr 120px 120px 120px; gap:.5rem; padding:.7rem 1.25rem; background:var(--surface2); border-top:2px solid var(--border); font-size:.83rem; font-weight:700;">
+        <span>합계</span>
+        <span style="text-align:right; color:var(--text-muted);">{{ "{:,}".format(total_budget) }}</span>
+        <span style="text-align:right; color:var(--primary);">{{ "{:,}".format(total_spent) }}</span>
+        <span style="text-align:right; color:{% if total_spent > total_budget %}var(--danger){% else %}var(--success){% endif %};">
+          {{ "{:,}".format(total_budget - total_spent) }}
+        </span>
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── 과제 목록 ── -->
   <div class="sec-title">📁 과제 목록</div>
 
