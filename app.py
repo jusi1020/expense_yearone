@@ -1,11 +1,61 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, send_from_directory, jsonify
 from pypdf import PdfWriter, PdfReader
 from PIL import Image
 from datetime import datetime
 import io
+import os
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
+
+BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
+
+# 비용 유형별 관련 별지 매핑
+BYEOLJI_MAP = {
+    'meeting_fee': [
+        '【별지 제10호 서식】 - 회의 계획서.hwp',
+    ],
+    'seminar_fee': [
+        '【별지 제8호 서식】 - 세미나 개최 계획서.hwp',
+        '【별지 제9호 서식】 - 세미나 정산 보고서.hwp',
+        '【별지 제9-1호 서식】 특강료 영수증.hwp',
+    ],
+    'expert_utilization': [
+        '【별지 제4호 서식】 - 전문가활용내역서.hwp',
+        '【별지 제9-1호 서식】 특강료 영수증.hwp',
+    ],
+    'domestic_trip': [
+        '【별지 제11호 서식】 - 여비산출내역서.hwp',
+        '【별지 제11-1호 서식】 - 운임 및 숙박비 확인서.hwp',
+    ],
+    'overseas_trip': [
+        '【별지 제11호 서식】 - 여비산출내역서.hwp',
+        '【별지 제11-1호 서식】 - 운임 및 숙박비 확인서.hwp',
+        '【별지 제12호 서식】 - 공무국외출장계획서.hwp',
+        '【별지 제13호 서식】 - 국외출장결과보고서.hwp',
+    ],
+    'overtime_meal': [
+        '【별지 제14호 서식】 - 시간외근무 확인대장.hwp',
+    ],
+    'conference_fee': [
+        '【별지 제16호 서식】 - 지급신청서(학회․세미나참가비,논문게재료,심사료,투고료).hwp',
+    ],
+    'other_expenses': [
+        '【별지 제15호 서식】 - 논문 게재료 신청서.hwp',
+        '【별지 제16호 서식】 - 지급신청서(학회․세미나참가비,논문게재료,심사료,투고료).hwp',
+        '【별지 제17호 서식】 - 지급명세서(우편 전화).hwp',
+    ],
+    'research_allowance': [
+        '【별지 제18호 서식】 - 연구수당 신청서.hwp',
+        '【별지 제18-1호 서식】 - 연구수당 지급 평가서.hwp',
+    ],
+}
+
+def get_byeolji_all():
+    try:
+        return sorted(os.listdir(BYEOLJI_DIR))
+    except Exception:
+        return []
 
 # ─── 비용 유형 정의 ────────────────────────────────────────────────────────────
 # category / category_icon : 그룹핑에 사용
@@ -677,7 +727,16 @@ def merge_files(files_dict, doc_order):
 
 @app.route('/')
 def index():
-    return render_template('index.html', categories=get_categories(), descriptions=DESCRIPTIONS)
+    return render_template('index.html',
+                           categories=get_categories(),
+                           descriptions=DESCRIPTIONS,
+                           byeolji_all=get_byeolji_all(),
+                           byeolji_map=BYEOLJI_MAP)
+
+
+@app.route('/byeolji/<path:filename>')
+def download_byeolji(filename):
+    return send_from_directory(BYEOLJI_DIR, filename, as_attachment=True)
 
 
 @app.route('/merge', methods=['POST'])

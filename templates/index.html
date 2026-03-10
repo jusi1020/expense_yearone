@@ -145,6 +145,15 @@
       border-radius: 8px; padding: .45rem 1rem; cursor: pointer;
     }
 
+    /* ── Byeolji Chip ────────────────────────────────────────────────────── */
+    .byeolji-chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+      padding: .3rem .8rem; font-size: .76rem; color: var(--text); text-decoration: none;
+      transition: all .15s; white-space: nowrap;
+    }
+    .byeolji-chip:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
     /* ── Toast ───────────────────────────────────────────────────────────── */
     #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; }
     .toast-msg {
@@ -202,7 +211,33 @@
       <span class="fw-semibold">파일 업로드</span>
       <span class="ms-2" id="type-name-label" style="font-size:.83rem; color:var(--text-muted);"></span>
     </div>
+
+    <!-- 관련 별지 -->
+    <div id="byeolji-section" style="display:none; margin-bottom:1.25rem;">
+      <div style="font-size:.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem;">📎 관련 서식 다운로드</div>
+      <div id="byeolji-list" class="d-flex flex-wrap gap-2"></div>
+    </div>
+
     <div id="doc-list" class="row g-3"></div>
+  </div>
+
+  <!-- 전체 별지 목록 -->
+  <div class="mb-5">
+    <button class="btn-secondary-themed w-100 text-start d-flex align-items-center justify-content-between"
+            style="border-radius:10px; padding:.65rem 1rem;"
+            onclick="toggleAllByeolji()">
+      <span style="font-size:.88rem; font-weight:600;">📂 전체 별지 서식 목록</span>
+      <span id="byeolji-toggle-icon">▼</span>
+    </button>
+    <div id="all-byeolji-section" style="display:none; margin-top:.75rem;">
+      <div class="d-flex flex-wrap gap-2">
+        {% for f in byeolji_all %}
+        <a href="/byeolji/{{ f | urlencode }}"
+           class="byeolji-chip"
+           download="{{ f }}">📄 {{ f.replace('.hwp','') }}</a>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 
   <!-- Step 3 -->
@@ -269,7 +304,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  const DESCRIPTIONS = {{ descriptions | tojson | safe }};
+  const DESCRIPTIONS  = {{ descriptions | tojson | safe }};
+  const BYEOLJI_MAP   = {{ byeolji_map | tojson | safe }};
 
   // ── 파일명 형식 힌트 ──────────────────────────────────────────────────────
   const FILENAME_HINTS = {
@@ -325,6 +361,8 @@
     document.getElementById('merge-section').style.display  = 'block';
     document.getElementById('type-name-label').textContent  =
       '— ' + document.querySelector('.type-card.selected .label').textContent;
+
+    renderByeolji(selectedType);
 
     const list = document.getElementById('doc-list');
     list.innerHTML = '';
@@ -518,6 +556,32 @@
       toast('✅ PDF 병합 완료! 다운로드를 확인하세요.');
     } catch { toast('네트워크 오류가 발생했습니다.', true); }
     finally { btn.disabled = false; loading.style.display = 'none'; }
+  }
+
+  // ── Byeolji section ────────────────────────────────────────────────────────
+  function renderByeolji(typeKey) {
+    const section = document.getElementById('byeolji-section');
+    const list    = document.getElementById('byeolji-list');
+    const files   = BYEOLJI_MAP[typeKey] || [];
+    list.innerHTML = '';
+    if (!files.length) { section.style.display = 'none'; return; }
+    files.forEach(f => {
+      const a = document.createElement('a');
+      a.className = 'byeolji-chip';
+      a.href      = '/byeolji/' + encodeURIComponent(f);
+      a.download  = f;
+      a.textContent = '📄 ' + f.replace('.hwp', '');
+      list.appendChild(a);
+    });
+    section.style.display = 'block';
+  }
+
+  function toggleAllByeolji() {
+    const sec  = document.getElementById('all-byeolji-section');
+    const icon = document.getElementById('byeolji-toggle-icon');
+    const open = sec.style.display === 'none';
+    sec.style.display  = open ? 'block' : 'none';
+    icon.textContent   = open ? '▲' : '▼';
   }
 
   // ── Filename hint apply ────────────────────────────────────────────────────
