@@ -253,13 +253,20 @@
       <span id="byeolji-toggle-icon">▼</span>
     </button>
     <div id="all-byeolji-section" style="display:none; margin-top:.75rem;">
-      <div class="d-flex flex-wrap gap-2">
-        {% for f in byeolji_all %}
-        <a href="/byeolji/{{ f | urlencode }}"
-           class="byeolji-chip"
-           download="{{ f }}">📄 {{ f.replace('.hwp','') }}</a>
+      <div style="font-size:.75rem; font-weight:700; color:var(--text-muted); margin-bottom:.5rem;">일반 별지</div>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for prefix, f in byeolji_all %}
+        <a href="/byeolji/{{ f | urlencode }}" class="byeolji-chip" download="{{ f }}">📄 {{ f.replace('.hwp','') }}</a>
         {% endfor %}
       </div>
+      {% if ingebi_all %}
+      <div style="font-size:.75rem; font-weight:700; color:var(--text-muted); margin-bottom:.5rem; margin-top:.5rem;">👨‍🎓 학생인건비 별지</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for prefix, f in ingebi_all %}
+        <a href="/ingebi-byeolji/{{ f | urlencode }}" class="byeolji-chip" download="{{ f }}">📄 {{ f.replace('.hwp','') }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -329,6 +336,7 @@
 <script>
   const DESCRIPTIONS  = {{ descriptions | tojson | safe }};
   const BYEOLJI_MAP   = {{ byeolji_map | tojson | safe }};
+  const INGEBI_TYPES  = new Set({{ ingebi_types | tojson | safe }});
 
   // ── 파일명 형식 힌트 ──────────────────────────────────────────────────────
   const FILENAME_HINTS = {
@@ -583,12 +591,13 @@
     const section = document.getElementById('byeolji-section');
     const list    = document.getElementById('byeolji-list');
     const files   = BYEOLJI_MAP[typeKey] || [];
+    const isIngebi = INGEBI_TYPES.has(typeKey);
     list.innerHTML = '';
     if (!files.length) { section.style.display = 'none'; return; }
     files.forEach(f => {
       const a = document.createElement('a');
       a.className = 'byeolji-chip';
-      a.href      = '/byeolji/' + encodeURIComponent(f);
+      a.href      = (isIngebi ? '/ingebi-byeolji/' : '/byeolji/') + encodeURIComponent(f);
       a.download  = f;
       a.textContent = '📄 ' + f.replace('.hwp', '');
       list.appendChild(a);

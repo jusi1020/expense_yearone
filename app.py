@@ -44,7 +44,8 @@ def get_current_user():
 def generate_invite_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
+BYEOLJI_DIR        = os.path.join(os.path.dirname(os.path.abspath(__file__)), '별지')
+INGEBI_BYEOLJI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '인건비_별지')
 
 # 비용 유형별 관련 별지 매핑
 BYEOLJI_MAP = {
@@ -85,13 +86,28 @@ BYEOLJI_MAP = {
         '【별지 제18호 서식】 - 연구수당 신청서.hwp',
         '【별지 제18-1호 서식】 - 연구수당 지급 평가서.hwp',
     ],
+    'student_labor_new': [
+        '② 참여연구원신청서(신규-공란 (1).hwp',
+        '⑤ (인건비표기) 연구참여 확약서 (1).hwp',
+        '③ (한국연구재단 외) 개인정보동의서(개정).hwp',
+        '④ (한국연구재단 외) 청렴서약서(강정은) (1).hwp',
+        '⑥ 3책5공 확인(예시포함).hwp',
+    ],
+    'student_labor_change': [
+        '⑤ (인건비표기) 연구참여 확약서 (1).hwp',
+        '③ (한국연구재단 외) 개인정보동의서(개정).hwp',
+        '④ (한국연구재단 외) 청렴서약서(강정은) (1).hwp',
+        '⑥ 3책5공 확인(예시포함).hwp',
+    ],
 }
 
+# 인건비_별지는 별도 URL prefix 사용 (ingebi: 로 구분)
+INGEBI_PREFIX = 'ingebi:'
+
 def get_byeolji_all():
-    try:
-        return sorted(os.listdir(BYEOLJI_DIR))
-    except Exception:
-        return []
+    regular = [('', f) for f in sorted(os.listdir(BYEOLJI_DIR))] if os.path.exists(BYEOLJI_DIR) else []
+    ingebi  = [(INGEBI_PREFIX, f) for f in sorted(os.listdir(INGEBI_BYEOLJI_DIR))] if os.path.exists(INGEBI_BYEOLJI_DIR) else []
+    return {'regular': regular, 'ingebi': ingebi}
 
 # ─── 비용 유형 정의 ────────────────────────────────────────────────────────────
 # category / category_icon : 그룹핑에 사용
@@ -382,7 +398,39 @@ EXPENSE_TYPES = {
         ]
     },
 
-    # ── 3. 연구수당 ──────────────────────────────────────────────────────────────
+    # ── 3. 학생인건비 ─────────────────────────────────────────────────────────────
+    'student_labor_new': {
+        'name': '학생인건비 (신규)',
+        'category': '학생인건비',
+        'category_icon': '👨‍🎓',
+        'icon': '📝',
+        'documents': [
+            {'id': 'new_application',  'name': '참여연구원 신규 신청서',     'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'commitment',       'name': '연구참여 확약서',            'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'bank_copy',        'name': '통장사본',                   'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'health_insurance', 'name': '건강보험자격득실확인서',      'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'privacy_consent',  'name': '개인정보동의서',             'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'integrity_pledge', 'name': '청렴서약서',                 'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'three_five',       'name': '3책5공 확인',                'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+        ]
+    },
+    'student_labor_change': {
+        'name': '학생인건비 (변경)',
+        'category': '학생인건비',
+        'category_icon': '👨‍🎓',
+        'icon': '🔄',
+        'documents': [
+            {'id': 'change_application', 'name': '참여연구원 변경 신청서',   'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'commitment',         'name': '연구참여 확약서',          'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'bank_copy',          'name': '통장사본',                 'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'health_insurance',   'name': '건강보험자격득실확인서',    'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'privacy_consent',    'name': '개인정보동의서',           'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'integrity_pledge',   'name': '청렴서약서',               'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+            {'id': 'three_five',         'name': '3책5공 확인',              'required': False, 'accept': '.pdf,.jpg,.jpeg,.png'},
+        ]
+    },
+
+    # ── 4. 연구수당 ──────────────────────────────────────────────────────────────
     'research_allowance': {
         'name': '연구수당',
         'category': '연구수당',
@@ -761,20 +809,30 @@ def merge_files(files_dict, doc_order):
     return out
 
 
+INGEBI_TYPES = {'student_labor_new', 'student_labor_change'}
+
 @app.route('/')
 def index():
-    user = get_current_user()
+    user      = get_current_user()
+    byeolji   = get_byeolji_all()
     return render_template('index.html',
                            categories=get_categories(),
                            descriptions=DESCRIPTIONS,
-                           byeolji_all=get_byeolji_all(),
+                           byeolji_all=byeolji['regular'],
+                           ingebi_all=byeolji['ingebi'],
                            byeolji_map=BYEOLJI_MAP,
+                           ingebi_types=list(INGEBI_TYPES),
                            user=user)
 
 
 @app.route('/byeolji/<path:filename>')
 def download_byeolji(filename):
     return send_from_directory(BYEOLJI_DIR, filename, as_attachment=True)
+
+
+@app.route('/ingebi-byeolji/<path:filename>')
+def download_ingebi_byeolji(filename):
+    return send_from_directory(INGEBI_BYEOLJI_DIR, filename, as_attachment=True)
 
 
 # ── 연구비 관리 시스템 ─────────────────────────────────────────────────────────
