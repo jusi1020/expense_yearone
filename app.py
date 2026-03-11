@@ -837,7 +837,15 @@ def image_to_pdf_bytes(file):
     return buf
 
 
-def merge_files(files_dict, doc_order):
+class PdfPasswordRequired(Exception):
+    def __init__(self, filename):
+        self.filename = filename
+        super().__init__(f"파일에 암호가 설정되어 있습니다: {filename}")
+
+
+def merge_files(files_dict, doc_order, pdf_passwords=None):
+    if pdf_passwords is None:
+        pdf_passwords = {}
     writer = PdfWriter()
     for doc_id in doc_order:
         for f in files_dict.get(doc_id, []):
@@ -845,6 +853,17 @@ def merge_files(files_dict, doc_order):
             name = f.filename.lower()
             if name.endswith('.pdf'):
                 reader = PdfReader(f)
+                if reader.is_encrypted:
+                    # 먼저 빈 패스워드로 시도
+                    if reader.decrypt('') == 0:
+                        # 빈 패스워드 실패 → 사용자 제공 패스워드 시도
+                        password = pdf_passwords.get(f.filename, '')
+                        if not password:
+                            raise PdfPasswordRequired(f.filename)
+                        f.seek(0)
+                        reader = PdfReader(f)
+                        if reader.decrypt(password) == 0:
+                            raise ValueError(f"'{f.filename}' 파일의 암호가 올바르지 않습니다.")
                 for page in reader.pages:
                     writer.add_page(page)
             elif name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
@@ -1239,12 +1258,21 @@ def merge():
     if not files_dict:
         return jsonify({'error': '파일을 하나 이상 업로드해주세요.'}), 400
 
+    # 암호화된 PDF의 패스워드 수집
+    pdf_passwords = {}
+    for key in request.form:
+        if key.startswith('pdf_password_'):
+            filename = key[len('pdf_password_'):]
+            pdf_passwords[filename] = request.form.get(key)
+
     try:
-        merged   = merge_files(files_dict, doc_order)
+        merged   = merge_files(files_dict, doc_order, pdf_passwords)
         date_str = datetime.now().strftime('%Y%m%d')
         filename = f"{info['name']}_{date_str}.pdf"
         return send_file(merged, mimetype='application/pdf',
                          as_attachment=True, download_name=filename)
+    except PdfPasswordRequired as e:
+        return jsonify({'error': 'password_required', 'filename': e.filename}), 400
     except Exception as e:
         return jsonify({'error': f'PDF 병합 오류: {str(e)}'}), 500
 

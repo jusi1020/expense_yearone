@@ -330,6 +330,28 @@
   </div>
 </div>
 
+<!-- PDF Password Modal -->
+<div class="modal fade" id="pdfPasswordModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🔒 PDF 암호 입력</h5>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.9rem; color:var(--text-muted); margin-bottom:1rem;">
+          아래 파일에 암호가 설정되어 있습니다. 암호를 입력해주세요.
+        </p>
+        <p id="pw-filename" style="font-size:.85rem; font-weight:600; color:var(--text); background:var(--surface-alt,#f1f5f9); padding:.5rem .75rem; border-radius:6px; word-break:break-all; margin-bottom:1rem;"></p>
+        <input type="password" id="pdf-password-input" class="form-control" placeholder="PDF 암호를 입력하세요" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary-themed" id="pw-cancel-btn">취소</button>
+        <button class="btn btn-merge ms-2" id="pw-confirm-btn">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -561,10 +583,15 @@
   }
 
   // ── Merge ──────────────────────────────────────────────────────────────────
-  async function doMerge() {
+  async function doMerge(collectedPasswords = {}) {
     const form = new FormData();
     form.append('expense_type', selectedType);
     selectedDocs.forEach(doc => (fileStore[doc.id] || []).forEach(f => form.append(doc.id, f)));
+
+    // 이미 수집된 PDF 암호 추가
+    for (const [fname, pw] of Object.entries(collectedPasswords)) {
+      form.append('pdf_password_' + fname, pw);
+    }
 
     const btn     = document.getElementById('merge-btn');
     const loading = document.getElementById('merge-loading');
@@ -572,7 +599,18 @@
 
     try {
       const res = await fetch('/merge', { method: 'POST', body: form });
-      if (!res.ok) { toast((await res.json()).error || '오류가 발생했습니다.', true); return; }
+
+      if (!res.ok) {
+        const data = await res.json();
+        // 암호화된 PDF 감지 → 암호 입력 모달 표시
+        if (data.error === 'password_required') {
+          btn.disabled = false; loading.style.display = 'none';
+          showPdfPasswordModal(data.filename, collectedPasswords);
+          return;
+        }
+        toast(data.error || '오류가 발생했습니다.', true);
+        return;
+      }
 
       const blob      = await res.blob();
       const filename  = (document.getElementById('custom-filename').value.trim() || TYPE_NAMES[selectedType]) + '.pdf';
@@ -584,6 +622,45 @@
       toast('✅ PDF 병합 완료! 다운로드를 확인하세요.');
     } catch { toast('네트워크 오류가 발생했습니다.', true); }
     finally { btn.disabled = false; loading.style.display = 'none'; }
+  }
+
+  function showPdfPasswordModal(filename, collectedPasswords) {
+    document.getElementById('pw-filename').textContent = filename;
+    document.getElementById('pdf-password-input').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('pdfPasswordModal'));
+
+    const confirmBtn = document.getElementById('pw-confirm-btn');
+    const cancelBtn  = document.getElementById('pw-cancel-btn');
+
+    const onConfirm = () => {
+      const pw = document.getElementById('pdf-password-input').value;
+      cleanup();
+      modal.hide();
+      collectedPasswords[filename] = pw;
+      doMerge(collectedPasswords);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      modal.hide();
+      toast('암호 입력이 취소되어 병합이 중단되었습니다.', true);
+    };
+
+    const onKeydown = (e) => { if (e.key === 'Enter') onConfirm(); };
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      document.getElementById('pdf-password-input').removeEventListener('keydown', onKeydown);
+    }
+
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    document.getElementById('pdf-password-input').addEventListener('keydown', onKeydown);
+
+    modal.show();
+    setTimeout(() => document.getElementById('pdf-password-input').focus(), 300);
   }
 
   // ── Byeolji section ────────────────────────────────────────────────────────
